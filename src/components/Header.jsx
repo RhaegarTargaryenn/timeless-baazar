@@ -2,17 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Search, Menu, X, Moon, Sun, User, LogOut, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '../firebase/config';
 import useCartStore from '../store/cartStore';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showSearchBar, setShowSearchBar] = useState(false);
@@ -20,18 +17,7 @@ const Header = () => {
   const items = useCartStore(state => state.items);
   const totalItems = items.reduce((total, item) => total + item.quantity, 0);
   const { isDark, toggleTheme } = useTheme();
-
-  // Listen to auth state changes
-  useEffect(() => {
-    console.log('🔍 Header - Setting up auth listener');
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log('🔐 Header - Auth State:', currentUser ? currentUser.uid : 'No user');
-      setUser(currentUser);
-      setAuthLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const { user, loading: authLoading, signOut } = useAuth();
 
   // PWA Install prompt handler
   useEffect(() => {
@@ -81,7 +67,7 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await signOut();
       toast.success('Logged out successfully!');
       navigate('/');
     } catch (error) {

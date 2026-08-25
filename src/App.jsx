@@ -2,6 +2,8 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Header from './components/Header';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import './App.css';
@@ -23,6 +25,7 @@ const PageLoader = () => (
 function App() {
   return (
     <ThemeProvider>
+      <AuthProvider>
       <Router>
         <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
           <Header />
@@ -33,8 +36,22 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/track-order" element={<OrderTracking />} />
+                <Route
+                  path="/checkout"
+                  element={
+                    <ProtectedRoute>
+                      <Checkout />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/track-order"
+                  element={
+                    <ProtectedRoute>
+                      <OrderTracking />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
               </Routes>
@@ -59,6 +76,7 @@ function App() {
           />
         </div>
       </Router>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

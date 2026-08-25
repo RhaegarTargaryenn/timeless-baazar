@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { HiSearch, HiCheckCircle, HiClock, HiTruck, HiX } from 'react-icons/hi';
-import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { db } from '../firebase/config';
+import { useAuth } from '../context/AuthContext';
 import { formatPriceSimple } from '../utils/helpers';
 import toast from 'react-hot-toast';
 
@@ -11,76 +11,53 @@ const OrderTracking = () => {
   const [orderId, setOrderId] = useState('');
   const [order, setOrder] = useState(null);
   const [notFound, setNotFound] = useState(false);
-  const [user, setUser] = useState(null);
   const [myOrders, setMyOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
-  // Check auth and load user's orders
+  // ProtectedRoute guarantees a signed-in user by the time this renders, so
+  // this only has to fetch -- no auth subscription of its own.
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      console.log('🔍 OrderTracking - Auth State:', currentUser ? currentUser.uid : 'No user');
-      setUser(currentUser);
-      
-      if (currentUser) {
-        // Fetch user's orders from Firestore
-        try {
-          setLoading(true);
-          console.log('📥 Fetching orders for userId:', currentUser.uid);
-          
-          const ordersRef = collection(db, 'orders');
-          const q = query(
-            ordersRef,
-            where('userId', '==', currentUser.uid)
-          );
-          
-          const querySnapshot = await getDocs(q);
-          const orders = [];
-          
-          console.log('📊 Query returned:', querySnapshot.size, 'documents');
-          
-          querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            console.log('📄 Order Document:', {
-              firestoreId: doc.id,
-              orderId: data.orderId,
-              userId: data.userId,
-              orderDate: data.orderDate
-            });
-            
-            orders.push({ 
-              id: doc.id, 
-              ...data,
-              // Convert Firestore timestamp to ISO string if needed
-              orderDate: data.orderDate || data.createdAt?.toDate()?.toISOString() || new Date().toISOString()
-            });
-          });
-          
-          // Sort by orderDate in memory (newest first)
-          orders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
-          
-          console.log('✅ Loaded', orders.length, 'orders for user:', currentUser.email);
-          setMyOrders(orders);
-          
-          if (orders.length > 0) {
-            toast.success(`${orders.length} order(s) loaded!`, { duration: 2000 });
-          } else {
-            console.log('ℹ️ No orders found for this user');
-            toast('No orders found', { duration: 2000 });
-          }
-        } catch (error) {
-          console.error('❌ Error fetching orders:', error);
-          toast.error('Failed to load orders: ' + error.message);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        console.log('ℹ️ No user logged in, clearing orders');
-        setMyOrders([]);
-      }
-    });
+    if (!user) return;
 
-    return () => unsubscribe();
-  }, []);
+    let cancelled = false;
+
+    const loadOrders = async () => {
+      setLoading(true);
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'orders'), where('userId', '==', user.uid))
+        );
+
+        const orders = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            ...data,
+            orderDate:
+              data.orderDate ||
+              data.createdAt?.toDate?.()?.toISOString() ||
+              new Date().toISOString(),
+          };
+        });
+
+        orders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
+
+        if (!cancelled) setMyOrders(orders);
+      } catch (error) {
+        console.error('Failed to load orders:', error);
+        if (!cancelled) toast.error('Could not load your orders.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadOrders();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const handleSearch = (e) => {
     e.preventDefault();

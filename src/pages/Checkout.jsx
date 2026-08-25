@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check, Trash2, Plus, Minus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { onAuthStateChanged } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { db } from '../firebase/config';
+import { useAuth } from '../context/AuthContext';
+import VerifyEmailGate from '../components/VerifyEmailGate';
 import useCartStore from '../store/cartStore';
 import { formatPriceSimple, generateOrderId } from '../utils/helpers';
 import { notifyNewOrder } from '../utils/orderNotification';
@@ -16,9 +17,8 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { items, getTotal, updateQuantity, removeItem, clearCart } = useCartStore();
   const [currentStep, setCurrentStep] = useState(1); // 1: Cart, 2: Address, 3: Payment, 4: Success
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const { user, isVerified } = useAuth();
   
   // Order data
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -26,22 +26,6 @@ const Checkout = () => {
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
   const [orderId, setOrderId] = useState('');
-
-  // Check authentication
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        toast.error('Please login to checkout');
-        sessionStorage.setItem('returnUrl', '/checkout');
-        navigate('/login', { replace: true });
-        return;
-      }
-      setUser(currentUser);
-      setAuthLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [navigate]);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -154,15 +138,10 @@ const Checkout = () => {
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
+  // Google accounts arrive verified. An unverified email/password account gets
+  // stopped here rather than at login -- see VerifyEmailGate for why.
+  if (!isVerified) {
+    return <VerifyEmailGate />;
   }
 
   // Success Screen
