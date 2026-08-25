@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeless Baazar - Icon Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #FF9800;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .preview-section {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .preview-box {
+            text-align: center;
+        }
+        
+        .preview-box h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        canvas {
+            border: 3px solid #FF9800;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(255, 152, 0, 0.3);
+        }
+        
+        .controls {
+            background: #f5f5f5;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1em;
+        }
+        
+        input[type="text"],
+        input[type="color"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #FF9800;
+        }
+        
+        input[type="color"] {
+            height: 50px;
+            cursor: pointer;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #FF9800, #FF6D00);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .success-message {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+            font-size: 1.1em;
+            animation: slideIn 0.5s;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #FF9800;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+        }
+        
+        .instructions h3 {
+            color: #FF9800;
+            margin-bottom: 12px;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        
+        .instructions li {
+            color: #666;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 PWA Icon Generator</h1>
+        <p class="subtitle">Create perfect icons for your Timeless Baazar PWA</p>
+        
+        <div class="instructions">
+            <h3>📋 Instructions:</h3>
+            <ol>
+                <li>Customize your icon text, colors, and style below</li>
+                <li>Click "Generate Icons" to create preview</li>
+                <li>Click "Download 192x192" and "Download 512x512" buttons</li>
+                <li>Save downloaded files as <code>icon-192.png</code> and <code>icon-512.png</code></li>
+                <li>Copy both files to your <code>public/</code> folder</li>
+            </ol>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Icon Text:</label>
+                <input type="text" id="iconText" value="TB" maxlength="3">
+            </div>
+            
+            <div class="control-group">
+                <label>Background Color:</label>
+                <input type="color" id="bgColor1" value="#FF9800">
+            </div>
+            
+            <div class="control-group">
+                <label>Gradient Color (Optional):</label>
+                <input type="color" id="bgColor2" value="#FF6D00">
+            </div>
+            
+            <div class="control-group">
+                <label>Text Color:</label>
+                <input type="color" id="textColor" value="#FFFFFF">
+            </div>
+            
+            <div class="control-group">
+                <label>Font Style:</label>
+                <select id="fontStyle">
+                    <option value="bold">Bold</option>
+                    <option value="normal">Normal</option>
+                    <option value="900">Extra Bold</option>
+                </select>
+            </div>
+        </div>
+        
+        <button class="btn-primary" onclick="generateIcons()">🎨 Generate Icons</button>
+        
+        <div class="preview-section">
+            <div class="preview-box">
+                <h3>192x192 Icon</h3>
+                <canvas id="canvas192" width="192" height="192"></canvas>
+                <div style="margin-top: 15px;">
+                    <button class="btn-secondary" onclick="downloadIcon(192)">⬇️ Download 192x192</button>
+                </div>
+            </div>
+            
+            <div class="preview-box">
+                <h3>512x512 Icon</h3>
+                <canvas id="canvas512" width="512" height="512"></canvas>
+                <div style="margin-top: 15px;">
+                    <button class="btn-secondary" onclick="downloadIcon(512)">⬇️ Download 512x512</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="successMessage" class="success-message">
+            ✅ Icons generated successfully! Now download them using the buttons above.
+        </div>
+    </div>
+    
+    <script>
+        // Auto-generate on load
+        window.onload = function() {
+            generateIcons();
+        };
+        
+        // Auto-regenerate when inputs change
+        document.getElementById('iconText').addEventListener('input', generateIcons);
+        document.getElementById('bgColor1').addEventListener('input', generateIcons);
+        document.getElementById('bgColor2').addEventListener('input', generateIcons);
+        document.getElementById('textColor').addEventListener('input', generateIcons);
+        document.getElementById('fontStyle').addEventListener('change', generateIcons);
+        
+        function generateIcons() {
+            const text = document.getElementById('iconText').value || 'TB';
+            const bgColor1 = document.getElementById('bgColor1').value;
+            const bgColor2 = document.getElementById('bgColor2').value;
+            const textColor = document.getElementById('textColor').value;
+            const fontStyle = document.getElementById('fontStyle').value;
+            
+            // Generate both sizes
+            drawIcon(192, text, bgColor1, bgColor2, textColor, fontStyle);
+            drawIcon(512, text, bgColor1, bgColor2, textColor, fontStyle);
+            
+            // Show success message
+            const msg = document.getElementById('successMessage');
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 3000);
+        }
+        
+        function drawIcon(size, text, bgColor1, bgColor2, textColor, fontStyle) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Draw gradient background
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, bgColor1);
+            gradient.addColorStop(1, bgColor2);
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add subtle pattern overlay
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            for (let i = 0; i < size; i += 20) {
+                ctx.fillRect(i, 0, 10, size);
+            }
+            
+            // Draw text
+            ctx.fillStyle = textColor;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Font size based on canvas size
+            const fontSize = size * 0.4;
+            ctx.font = `${fontStyle} ${fontSize}px Arial, sans-serif`;
+            
+            // Add shadow for depth
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            ctx.shadowBlur = size * 0.02;
+            ctx.shadowOffsetX = size * 0.005;
+            ctx.shadowOffsetY = size * 0.005;
+            
+            ctx.fillText(text, size / 2, size / 2);
+            
+            // Add subtle border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = size * 0.01;
+            ctx.strokeRect(0, 0, size, size);
+        }
+        
+        function downloadIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const link = document.createElement('a');
+            link.download = `icon-${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            
+            // Visual feedback
+            alert(`✅ Icon ${size}x${size} downloaded!\n\nSave it as: icon-${size}.png\nLocation: public/ folder`);
+        }
+    </script>
+</body>
+</html>

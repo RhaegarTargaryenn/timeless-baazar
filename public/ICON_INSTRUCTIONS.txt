@@ -1,0 +1,16 @@
+// Create placeholder icons - Replace these with actual icons later
+
+// Instructions to create real icons:
+// 1. Use a tool like https://realfavicongenerator.net/
+// 2. Or use Canva/Photoshop to create:
+//    - 192x192 PNG
+//    - 512x512 PNG
+// 3. Save them in public/ folder as icon-192.png and icon-512.png
+
+// For now, you can use:
+// - Your logo
+// - "TB" letters in orange gradient
+// - Shopping cart icon
+
+// Temporary: You can take a screenshot of your logo from the website
+// and resize it to these dimensions
