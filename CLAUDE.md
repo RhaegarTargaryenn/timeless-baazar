@@ -32,7 +32,10 @@ npm run preview  # serve the production build
 
 ## Current state
 
-Phases 0 (foundation) and 1 (auth) are done. Phase 2 (backend + MongoDB) is next.
+Phases 0 (foundation) and 1 (auth) are done. Phase 2 (backend + MongoDB) is
+paused part-way: the Atlas cluster is live and the Express skeleton exists in
+`server/`, but there are no models or routes yet. `docs/PROJECT_LOG.md` has a
+"Resume here" section with the exact next step.
 
 Products are still hardcoded in `src/data/products.js` and orders still go to
 Firestore — both move to a MongoDB-backed API in Phases 2–4. Do not build on the

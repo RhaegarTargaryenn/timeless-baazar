@@ -47,7 +47,7 @@ without calling anyone.**
 
 - [x] **Phase 0 — Foundation** ✅ done 2026-08-25
 - [x] **Phase 1 — Auth fix** ✅ done 2026-08-25
-- [ ] **Phase 2 — Backend + MongoDB** ← next
+- [ ] **Phase 2 — Backend + MongoDB** ← in progress, PAUSED HERE
 - [ ] **Phase 3 — Admin panel** ← *this is the phase that solves the real problem*
 - [ ] **Phase 4 — Storefront rewired to the API**
 - [ ] **Phase 5 — UI rebuild, mobile-first**
@@ -143,6 +143,100 @@ navigated after a bare `setTimeout(300)`, racing the same listeners.
 flash, no error toast, console clean.
 **Not tested:** the signed-in path — needs a manual pass with real Google
 credentials.
+
+---
+
+## Phase 2 — Backend + MongoDB  ⏸ PAUSED MID-SETUP
+
+Commit: `a021b2a` (scaffold). Infrastructure is up; the API has no routes yet.
+
+### Done
+
+**MongoDB Atlas cluster is live and reachable.**
+
+| | |
+|---|---|
+| Cluster | `timeless-baazar` — M0 Free, AWS, Mumbai (ap-south-1), 3-node replica set |
+| Database | `timeless_baazar` (currently empty, no collections) |
+| Server version | MongoDB 8.0.29 |
+| Network access | `0.0.0.0/0` — required because Render's free tier has no fixed outbound IP |
+| DB user | Auto-created by Atlas during setup. Has Atlas Admin role, which is more than the API needs — worth scoping down later |
+| Org / project | `Timeless_bazzar's Org` / `Project 0` |
+
+Two defaults were caught during creation and changed:
+- **M10 ($0.08/hour, ~₹5,000/month) was pre-selected.** Switched to Free.
+- **"Preload sample dataset" was checked.** That is ~350 MB against a 512 MB
+  quota. Unchecked.
+
+**Express API scaffolded** at `server/` — config, auth middleware, error
+handling, `/health`. No routes or models yet; those wait on the schema.
+
+`server/src/scripts/checkDb.js` verifies the Atlas connection on its own,
+without needing the Firebase credentials. Run it whenever the DB is suspect:
+
+```bash
+cd server && node src/scripts/checkDb.js
+```
+
+### The DNS workaround — read this before touching MONGODB_URI
+
+This machine's DNS resolver is a link-local IPv6 router address (`fe80::1`)
+that refuses SRV lookups, so the normal `mongodb+srv://` string fails with
+`querySrv ECONNREFUSED`. **This is local only — Render resolves SRV fine.**
+
+`server/.env` therefore holds the *expanded* form, naming all three shards
+directly (`replicaSet=atlas-weghdz-shard-0`, `authSource=admin`). The original
+`srv://` string is kept as a comment in that file, and **that is the one to put
+in Render's environment**, not the expanded one.
+
+Do not "fix" the expanded URI back to `srv://` locally — it will just break again.
+
+### Also fixed along the way
+
+The connection string was first pasted into the **root** `.env` (the frontend's
+file) instead of `server/.env`. It was moved. It happened to be named
+`MONGODB_URI` rather than `VITE_MONGODB_URI`, so Vite never exposed it — had it
+carried the `VITE_` prefix, the database password would have shipped to every
+visitor's browser. Worth remembering: **anything `VITE_`-prefixed is public.**
+
+### ▶ Resume here — exactly where we stopped
+
+`server/.env` still needs two values. Everything else in it is filled in.
+
+1. **`FIREBASE_SERVICE_ACCOUNT`**
+   Firebase Console → Project Settings → Service accounts →
+   *Generate new private key* → a `.json` downloads.
+   Convert it to one line and paste the output after the `=`:
+   ```bash
+   node -e "console.log(JSON.stringify(require('C:/path/to/key.json')))"
+   ```
+   Do not commit the `.json` itself — `server/.gitignore` already blocks the
+   usual filenames.
+
+2. **`ADMIN_UIDS`**
+   Firebase Console → Authentication → Users → copy the User UID.
+   Use the developer's own UID while testing; swap in the client's at handoff.
+
+Then:
+```bash
+cd server && npm run dev
+curl http://localhost:4000/health     # expect {"status":"ok","db":"connected"}
+```
+
+### Then — the actual Phase 2 work, none of which has started
+
+- **Design the product schema.** This is the decision that matters most in the
+  whole rebuild. Today a product only has `price1kg` / `price500g`. A
+  Dribbble-grade storefront needs variants, stock, MRP vs selling price, an
+  `isActive` flag, and a display order. Get it wrong and both the admin panel
+  and the storefront get written twice.
+- Mongoose models: Product, Order, Coupon, User.
+- Seed script porting the 71 products out of `src/data/products.js`.
+  **Decide the "Coming Soon" question first** (see Open questions) — the seed is
+  the natural moment to settle it.
+- Routes: `/api/products`, `/api/orders`, `/api/coupons`.
+- Move the Google Sheets write from the browser to the backend.
+- Deploy to Render + keep-alive cron.
 
 ---
 
