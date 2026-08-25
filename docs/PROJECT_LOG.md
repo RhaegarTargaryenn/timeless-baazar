@@ -223,20 +223,91 @@ client's at handoff.
 
 ### ▶ Resume here
 
-### Then — the actual Phase 2 work, none of which has started
+### Schema — settled, seeded, and serving
 
-- **Design the product schema.** This is the decision that matters most in the
-  whole rebuild. Today a product only has `price1kg` / `price500g`. A
-  Dribbble-grade storefront needs variants, stock, MRP vs selling price, an
-  `isActive` flag, and a display order. Get it wrong and both the admin panel
-  and the storefront get written twice.
-- Mongoose models: Product, Order, Coupon, User.
-- Seed script porting the 71 products out of `src/data/products.js`.
-  **Decide the "Coming Soon" question first** (see Open questions) — the seed is
-  the natural moment to settle it.
-- Routes: `/api/products`, `/api/orders`, `/api/coupons`.
-- Move the Google Sheets write from the browser to the backend.
-- Deploy to Render + keep-alive cron.
+Commits: `d897976` (models + seed), `4655946` (routes).
+
+The client's answers and what they turned into:
+
+| Answer | In the schema |
+|---|---|
+| Shop sells 500 g and 1 kg only | Two variants each — but as an **array**, not fixed `price500g`/`price1kg` columns. The day someone asks for a 5 kg rice pack, that is one array entry instead of migrating the collection, every saved cart and every order. The admin form shows two price fields either way. |
+| The 20% discount is fake, drop it | `mrp` exists but defaults to `null`, and no badge renders without one. The old storefront invented a list price as `price / 0.8`. |
+| Stock is just on/off | A boolean per variant. A shop that must decrement a count after each delivery stops doing it, and then the count lies. |
+| Categories should be editable | Their own collection, so adding "Oil" is not a code change and a redeploy. |
+
+Decisions made without asking, because they are engineering, not business:
+
+- **Money is integer paise.** `132.50 * 3` is `397.50000000000006` in
+  JavaScript. Display rounding hides it; the number written to an order does
+  not get rounded. Rupees convert at the edges.
+- **Order line items and the applied coupon are snapshots.** A price rise next
+  week must not rewrite what a customer paid last week.
+- **No `role` field on User.** Admin comes from `ADMIN_UIDS` in the
+  environment. A flag in the collection can be flipped by anything that can
+  write to the collection.
+- **Addresses are embedded in User**, so setting a default is one atomic update
+  rather than the loop of sequential writes the Firestore version used.
+
+**Seeded:** 71 products, 6 categories, **42 active / 29 inactive**. The 29 are
+the old `id >= 43` group — prices are real but unconfirmed, so they are seeded
+hidden and the client can flip each one on. Re-running the seed will not
+overwrite prices or availability changed since, because the source file is a
+frozen snapshot that would silently roll the client's edits back.
+
+### The API
+
+| Route | Access |
+|---|---|
+| `GET /api/products`, `/api/products/:slug` | public — hidden products and variants stripped |
+| `GET /api/categories` | public |
+| `POST/PATCH/DELETE /api/products`, `/api/categories` | admin |
+| `PATCH /api/products/:id/visibility` | admin — its own route so the toggle cannot clobber a price |
+| `POST /api/coupons/validate` | signed in |
+| `GET/POST/PATCH/DELETE /api/coupons` | admin |
+| `POST /api/orders`, `GET /api/orders`, `/api/orders/:orderNumber` | signed in |
+| `GET /api/orders/admin/all`, `PATCH /api/orders/:orderNumber/status` | admin |
+
+**`POST /api/orders` takes no prices** — only productId, variantId, quantity.
+Totals, availability and the discount are resolved server-side. This is the
+single most important property of the API and the smoke test asserts it
+directly.
+
+Google Sheets moved off the browser into `services/sheets.js`. The old call used
+`mode:'no-cors'`, which cannot read a response — it logged "assumed success"
+regardless, so a broken Apps Script would have lost orders invisibly. The sync
+now retries with a backoff, records the outcome on the order, and
+`retryFailedSyncs()` replays anything still unsynced. It is fired without
+awaiting, so a Google outage cannot fail an order that is already saved.
+
+### Checking it still works
+
+```bash
+cd server
+npm run check-db    # Atlas connection only, no Firebase needed
+npm run dev         # API on :4000
+npm run smoke       # 25 end-to-end checks with a real Firebase ID token
+npm run seed        # dry run; --write to apply
+```
+
+`npm run smoke` mints a token through the Admin SDK and exchanges it for a real
+ID token the way a browser does, rather than mocking auth — so it exercises
+token verification, the uid check, validation and the handlers together. It
+cleans up everything it creates.
+
+### ▶ Resume here
+
+Phase 2 has two pieces left:
+
+1. **Deploy the API to Render** + a keep-alive cron. Note that Render must get
+   the `mongodb+srv://` connection string (kept as a comment in `server/.env`),
+   **not** the expanded one this machine needs.
+2. **Cloudinary** for product images. They are still local paths like
+   `/Products/Toor_dal.jpg`, which works only because the storefront serves
+   them. The admin panel needs real uploads.
+
+Then Phase 3 — the admin panel — which is the phase that actually solves the
+client's problem.
 
 ---
 

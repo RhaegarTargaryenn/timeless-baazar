@@ -33,13 +33,16 @@ npm run preview  # serve the production build
 ## Current state
 
 Phases 0 (foundation) and 1 (auth) are done. Phase 2 (backend + MongoDB) is
-part-way: the Atlas cluster is live, `server/.env` is complete and the API
-boots clean on :4000, but there are no models or routes yet. `docs/PROJECT_LOG.md` has a
-"Resume here" section with the exact next step.
+nearly done: MongoDB is seeded with all 71 products and the API in `server/`
+serves products, categories, orders and coupons. Render deploy and Cloudinary
+uploads are what remain. `docs/PROJECT_LOG.md` has a "Resume here" section.
 
-Products are still hardcoded in `src/data/products.js` and orders still go to
-Firestore — both move to a MongoDB-backed API in Phases 2–4. Do not build on the
-assumption that either is permanent.
+The **storefront** still reads `src/data/products.js` and writes orders to
+Firestore — rewiring it to the API is Phase 4. The API is already the source of
+truth; treat the hardcoded file as a frozen snapshot, not something to edit.
+
+Money is **integer paise** everywhere server-side and across the API. Convert to
+rupees only for display.
 
 Auth has exactly one subscription, in `src/context/AuthContext.jsx`. Never call
 `onAuthStateChanged` anywhere else — several components each having their own is
