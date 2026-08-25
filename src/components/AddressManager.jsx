@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Plus, X, Check, Home, Briefcase } from 'lucide-react';
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
-import { db, auth } from '../firebase/config';
 import toast from 'react-hot-toast';
+import { api } from '../lib/api';
 
 const AddressManager = ({ onSelectAddress, selectedAddressId }) => {
   const [addresses, setAddresses] = useState([]);
@@ -32,25 +31,16 @@ const AddressManager = ({ onSelectAddress, selectedAddressId }) => {
 
   const loadAddresses = async () => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
+      const { addresses: list } = await api.get('/addresses');
+      setAddresses(list);
 
-      const q = query(collection(db, 'addresses'), where('userId', '==', user.uid));
-      const querySnapshot = await getDocs(q);
-      const addressList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setAddresses(addressList);
-
-      // Auto-select default address
-      const defaultAddr = addressList.find(addr => addr.isDefault);
+      const defaultAddr = list.find((addr) => addr.isDefault);
       if (defaultAddr && !selectedAddressId) {
         onSelectAddress(defaultAddr);
       }
     } catch (error) {
       console.error('Error loading addresses:', error);
-      toast.error('Failed to load addresses');
+      toast.error('Could not load your addresses.');
     } finally {
       setLoading(false);
     }
@@ -65,33 +55,26 @@ const AddressManager = ({ onSelectAddress, selectedAddressId }) => {
     }
 
     try {
-      const user = auth.currentUser;
-      if (!user) {
-        toast.error('Please login first');
-        return;
-      }
-
-      const addressData = {
-        ...formData,
-        userId: user.uid,
-        createdAt: new Date().toISOString()
-      };
-
       if (editingAddress) {
-        await updateDoc(doc(db, 'addresses', editingAddress.id), addressData);
-        toast.success('Address updated successfully!');
+        const { addresses: list } = await api.patch(
+          `/addresses/${editingAddress._id}`,
+          formData
+        );
+        setAddresses(list);
+        toast.success('Address updated');
       } else {
-        await addDoc(collection(db, 'addresses'), addressData);
-        toast.success('Address added successfully!');
+        const { address, addresses: list } = await api.post('/addresses', formData);
+        setAddresses(list);
+        // Saving an address mid-checkout almost always means "use this one".
+        onSelectAddress(address);
+        toast.success('Address saved');
       }
 
       setShowAddForm(false);
       setEditingAddress(null);
       setFormData(emptyForm);
-      loadAddresses();
     } catch (error) {
-      console.error('Error saving address:', error);
-      toast.error('Failed to save address');
+      toast.error(error.details?.map((d) => d.message).join('. ') ?? error.message);
     }
   };
 
@@ -105,31 +88,23 @@ const AddressManager = ({ onSelectAddress, selectedAddressId }) => {
     if (!window.confirm('Are you sure you want to delete this address?')) return;
 
     try {
-      await deleteDoc(doc(db, 'addresses', addressId));
+      const { addresses: list } = await api.delete(`/addresses/${addressId}`);
+      setAddresses(list);
       toast.success('Address deleted');
-      loadAddresses();
     } catch (error) {
-      console.error('Error deleting address:', error);
-      toast.error('Failed to delete address');
+      toast.error(error.message);
     }
   };
 
   const handleSetDefault = async (address) => {
     try {
-      // Remove default from all addresses
-      for (const addr of addresses) {
-        if (addr.isDefault) {
-          await updateDoc(doc(db, 'addresses', addr.id), { isDefault: false });
-        }
-      }
-
-      // Set new default
-      await updateDoc(doc(db, 'addresses', address.id), { isDefault: true });
+      // One atomic call. The Firestore version looped over every address with a
+      // separate write, which could leave two defaults if it failed partway.
+      const { addresses: list } = await api.patch(`/addresses/${address._id}/default`);
+      setAddresses(list);
       toast.success('Default address updated');
-      loadAddresses();
     } catch (error) {
-      console.error('Error setting default:', error);
-      toast.error('Failed to set default address');
+      toast.error(error.message);
     }
   };
 
@@ -152,13 +127,13 @@ const AddressManager = ({ onSelectAddress, selectedAddressId }) => {
       <div className="space-y-3">
         {addresses.map((address, index) => (
           <motion.div
-            key={address.id}
+            key={address._id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             onClick={() => onSelectAddress(address)}
             className={`bg-white dark:bg-gray-800 rounded-2xl p-4 border-2 cursor-pointer transition-all ${
-              selectedAddressId === address.id
+              selectedAddressId === address._id
                 ? 'border-green-500 shadow-smooth-lg'
                 : 'border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-700'
             }`}
@@ -201,7 +176,7 @@ const AddressManager = ({ onSelectAddress, selectedAddressId }) => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(address.id);
+                        handleDelete(address._id);
                       }}
                       className="text-xs text-red-600 dark:text-red-400 font-semibold hover:underline"
                     >
@@ -223,7 +198,7 @@ const AddressManager = ({ onSelectAddress, selectedAddressId }) => {
               </div>
 
               {/* Selected Checkmark */}
-              {selectedAddressId === address.id && (
+              {selectedAddressId === address._id && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}

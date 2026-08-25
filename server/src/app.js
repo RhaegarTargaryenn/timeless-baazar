@@ -14,6 +14,7 @@ import productRoutes from './routes/products.js';
 import orderRoutes from './routes/orders.js';
 import couponRoutes from './routes/coupons.js';
 import meRoutes from './routes/me.js';
+import addressRoutes from './routes/addresses.js';
 
 export const createApp = () => {
   const app = express();
@@ -83,6 +84,7 @@ export const createApp = () => {
   app.use(attachUser);
 
   app.use('/api/me', meRoutes);
+  app.use('/api/addresses', addressRoutes);
   app.use('/api/categories', categoryRoutes);
   app.use('/api/products', productRoutes);
   app.use('/api/orders', orderRoutes);

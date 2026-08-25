@@ -1,7 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
@@ -38,8 +37,8 @@ setPersistence(auth, browserLocalPersistence).catch((error) => {
   console.error('Firebase auth persistence could not be enabled:', error);
 });
 
-// Initialize Cloud Firestore and get a reference to the service
-export const db = getFirestore(app);
+// Firestore is gone: products, orders, addresses and profiles all live in
+// MongoDB behind the API now. Firebase is kept for Auth only.
 
 // Initialize Analytics (optional, only works in production with HTTPS)
 let analytics = null;

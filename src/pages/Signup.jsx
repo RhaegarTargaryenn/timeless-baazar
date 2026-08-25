@@ -7,8 +7,7 @@ import {
   updateProfile,
   sendEmailVerification,
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { auth } from '../firebase/config';
 import { motion } from 'framer-motion';
 import { HiMail, HiLockClosed, HiUser, HiEye, HiEyeOff, HiArrowLeft } from 'react-icons/hi';
 import { FcGoogle } from 'react-icons/fc';
@@ -38,15 +37,8 @@ const Signup = () => {
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, provider);
-      await setDoc(
-        doc(db, 'users', result.user.uid),
-        {
-          name: result.user.displayName,
-          email: result.user.email,
-          createdAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+      // The MongoDB profile is created by GET /api/me on the next render --
+      // no second write here, and no Firestore.
       toast.success(`Welcome, ${result.user.displayName?.split(' ')[0] || 'there'}!`);
       goToDestination();
     } catch (err) {
@@ -84,11 +76,6 @@ const Signup = () => {
         emailForm.password
       );
       await updateProfile(credential.user, { displayName: emailForm.name });
-      await setDoc(doc(db, 'users', credential.user.uid), {
-        name: emailForm.name,
-        email: emailForm.email,
-        createdAt: new Date().toISOString(),
-      });
 
       // Best effort — a failed send must not block the signup itself, and the
       // user can resend from checkout.

@@ -3,29 +3,39 @@ import { X, ShoppingCart, Plus, Minus, Heart, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import useCartStore from '../store/cartStore';
-import { formatPriceSimple } from '../utils/helpers';
-import { isPurchasable } from '../data/products';
+import { formatRupees } from '../lib/api';
 
 const CATEGORY_EMOJI = { daal: '🥘', rice: '🍚', flour: '🌾', spices: '🌶️', snacks: '🍿', grocery: '🛍️' };
-const SIZES = [{ value: '1kg', label: '1 Kg' }, { value: '500g', label: '500g' }];
 
 const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
-  const [selectedSize, setSelectedSize] = useState('1kg');
+  const variants = product?.variants ?? [];
+
+  // Defaults to the last variant -- the larger pack, which is what most people
+  // buy. The API has already removed anything the shop marked out of stock.
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
   const addItem = useCartStore(state => state.addItem);
 
-  const currentPrice = selectedSize === '1kg' ? product?.price1kg : product?.price500g;
-  const originalPrice = currentPrice ? Math.round(currentPrice / 0.8) : 0; // Mock 20% discount
-  const canPurchase = isPurchasable(product, selectedSize);
+  const selectedVariant =
+    variants.find((v) => v._id === selectedVariantId) ?? variants[variants.length - 1] ?? null;
+
+  const canPurchase = Boolean(selectedVariant);
+
+  // A badge only when the shop entered a real list price. This used to be
+  // price / 0.8 with a hardcoded "20%" on every single product.
+  const hasDiscount = selectedVariant?.mrp != null && selectedVariant.mrp > selectedVariant.price;
+  const discountPercent = hasDiscount
+    ? Math.round(((selectedVariant.mrp - selectedVariant.price) / selectedVariant.mrp) * 100)
+    : 0;
 
   const handleAddToCart = () => {
     if (!canPurchase) {
-      toast.error('Price coming soon for this item');
+      toast.error('This item is not available right now');
       return;
     }
 
-    addItem(product, quantity, selectedSize);
+    addItem(product, selectedVariant, quantity);
     toast.success(`${product.name} added to cart!`, {
       icon: '🛒',
       duration: 1500,
@@ -98,7 +108,7 @@ const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-8xl">
-                    {CATEGORY_EMOJI[product.category] ?? '🛍️'}
+                    {CATEGORY_EMOJI[product.category?.slug] ?? '🛍️'}
                   </div>
                 )}
               </div>
@@ -109,7 +119,7 @@ const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                      {product.name} {selectedSize}
+                      {product.name}{selectedVariant ? ` · ${selectedVariant.label}` : ''}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{product.nameHindi}</p>
                   </div>
@@ -139,15 +149,15 @@ const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
                 <div className="flex items-center gap-4">
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-extrabold text-gray-900 dark:text-white">
-                      {canPurchase ? formatPriceSimple(currentPrice) : 'Soon'}
+                      {canPurchase ? formatRupees(selectedVariant.price) : 'Soon'}
                     </span>
-                    {canPurchase && (
+                    {hasDiscount && (
                       <>
                         <span className="text-lg text-gray-400 line-through">
-                          {formatPriceSimple(originalPrice)}
+                          {formatRupees(selectedVariant.mrp)}
                         </span>
                         <span className="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full">
-                          20%
+                          {discountPercent}%
                         </span>
                       </>
                     )}
@@ -166,17 +176,17 @@ const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
                     Select Size
                   </label>
                   <div className="flex gap-3">
-                    {SIZES.map(({ value, label }) => (
+                    {variants.map((variant) => (
                       <button
-                        key={value}
-                        onClick={() => setSelectedSize(value)}
+                        key={variant._id}
+                        onClick={() => setSelectedVariantId(variant._id)}
                         className={`flex-1 py-3 px-4 rounded-2xl font-semibold transition-all ${
-                          selectedSize === value
+                          selectedVariant?._id === variant._id
                             ? 'bg-green-600 text-white shadow-smooth'
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                         }`}
                       >
-                        {label}
+                        {variant.label}
                       </button>
                     ))}
                   </div>
@@ -214,14 +224,8 @@ const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
                     Description
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {product.description || `${product.name} offers a deliciously ${
-                      product.category === 'daal' ? 'protein-rich' : 'fresh'
-                    } experience. Made from high-quality ingredients, ${
-                      product.nameHindi
-                    } delivers a perfect balance of taste and nutrition.`}
-                    <button className="text-green-600 dark:text-green-400 font-semibold ml-1">
-                      Read More
-                    </button>
+                    {product.description ||
+                      `${product.name} from Timeless Baazar, sourced and packed with care.`}
                   </p>
                 </div>
               </div>

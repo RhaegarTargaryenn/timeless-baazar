@@ -3,19 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check, Trash2, Plus, Minus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
 import VerifyEmailGate from '../components/VerifyEmailGate';
 import useCartStore from '../store/cartStore';
-import { formatPriceSimple, generateOrderId } from '../utils/helpers';
-import { notifyNewOrder } from '../utils/orderNotification';
+import { api, formatRupees } from '../lib/api';
 import AddressManager from '../components/AddressManager';
 import PaymentMethod from '../components/PaymentMethod';
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { items, getTotal, updateQuantity, removeItem, clearCart } = useCartStore();
+  const { items, getTotal, updateQuantity, removeItem, clearCart, toOrderItems } = useCartStore();
   const [currentStep, setCurrentStep] = useState(1); // 1: Cart, 2: Address, 3: Payment, 4: Success
   const [isProcessing, setIsProcessing] = useState(false);
   const { user, isVerified } = useAuth();
@@ -24,8 +21,10 @@ const Checkout = () => {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [discountCode, setDiscountCode] = useState('');
-  const [discountApplied, setDiscountApplied] = useState(false);
-  const [orderId, setOrderId] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discount }
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
+  const [orderNumber, setOrderNumber] = useState('');
+  const [placedOrder, setPlacedOrder] = useState(null);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -34,23 +33,39 @@ const Checkout = () => {
     }
   }, [items, currentStep, navigate]);
 
+  // All paise. These figures are indicative -- the server recomputes every one
+  // of them from its own catalogue when the order is placed.
   const subtotal = getTotal();
-  const discount = discountApplied ? subtotal * 0.1 : 0; // 10% discount
+  const discount = appliedCoupon?.discount ?? 0;
   const total = subtotal - discount;
 
-  const handleApplyDiscount = () => {
-    if (discountCode.trim().toUpperCase() === 'SAVE10') {
-      setDiscountApplied(true);
-      toast.success('Discount code applied! 🎉');
-    } else {
-      toast.error('Invalid discount code');
+  /**
+   * Coupons are checked by the API now.
+   *
+   * The old version compared the typed text to the string 'SAVE10' in the
+   * browser: readable in devtools, valid forever, and reusable without limit.
+   * The server also tells us *why* a code failed, which is far more useful than
+   * "invalid code".
+   */
+  const handleApplyDiscount = async () => {
+    const code = discountCode.trim().toUpperCase();
+    if (!code) return;
+
+    setCheckingCoupon(true);
+    try {
+      const result = await api.post('/coupons/validate', { code, subtotal });
+      setAppliedCoupon({ code: result.coupon.code, discount: result.discount });
+      toast.success(`${formatRupees(result.discount)} off applied`);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setCheckingCoupon(false);
     }
   };
 
   const handleRemoveDiscount = () => {
     setDiscountCode('');
-    setDiscountApplied(false);
-    toast.success('Discount removed');
+    setAppliedCoupon(null);
   };
 
   const handleNextStep = () => {
@@ -79,7 +94,7 @@ const Checkout = () => {
   };
 
   const handlePlaceOrder = async () => {
-    if (!user || !selectedAddress || !selectedPayment) {
+    if (!selectedAddress || !selectedPayment) {
       toast.error('Missing order information');
       return;
     }
@@ -87,62 +102,45 @@ const Checkout = () => {
     setIsProcessing(true);
 
     try {
-      const newOrderId = generateOrderId();
-      setOrderId(newOrderId);
+      /**
+       * Notice what is not sent: prices, subtotal, total.
+       *
+       * The request says only what was chosen and how many. The server resolves
+       * every price from the live catalogue, re-checks the coupon, and computes
+       * the total itself. It also writes the Google Sheet, with retries, rather
+       * than the browser firing a no-cors request it can never read the result
+       * of.
+       */
+      const { order } = await api.post('/orders', {
+        items: toOrderItems(),
+        address: {
+          label: selectedAddress.label,
+          street: selectedAddress.street,
+          street2: selectedAddress.street2 ?? '',
+          village: selectedAddress.village ?? '',
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          zipCode: selectedAddress.zipCode,
+          country: selectedAddress.country ?? 'India',
+          phone: selectedAddress.phone ?? '',
+        },
+        couponCode: appliedCoupon?.code ?? null,
+        paymentMethod: 'cod',
+      });
 
-      const orderData = {
-        orderId: newOrderId,
-        userId: user.uid,
-        userEmail: user.email,
-        userName: user.displayName || selectedAddress.label,
-        address: selectedAddress,
-        items: items.map(item => ({
-          id: item.id,
-          name: item.name,
-          nameHindi: item.nameHindi || '',
-          size: item.size || '1kg',
-          price: item.price,
-          quantity: item.quantity,
-          subtotal: item.price * item.quantity
-        })),
-        subtotal: subtotal,
-        discount: discount,
-        total: total,
-        discountCode: discountApplied ? discountCode : null,
-        paymentMethod: selectedPayment.name,
-        orderDate: new Date().toISOString(),
-        status: 'pending',
-        createdAt: serverTimestamp()
-      };
-
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, 'orders'), orderData);
-      console.log('✅ Order saved:', docRef.id);
-
-      // Send notifications
-      await notifyNewOrder(orderData);
-
-      // Show success
+      setOrderNumber(order.orderNumber);
+      setPlacedOrder(order);
       setCurrentStep(4);
-      
-      // Clear cart after a delay
-      setTimeout(() => {
-        clearCart();
-      }, 100);
+      clearCart();
 
-      toast.success('Order placed successfully! 🎉', { duration: 5000 });
+      toast.success('Order placed!', { duration: 4000 });
     } catch (error) {
-      console.error('Order error:', error);
-      toast.error('Failed to place order. Please try again.');
+      // A 409 means the catalogue moved under the customer -- something went
+      // out of stock, or a price changed -- so say that rather than "failed".
+      toast.error(error.message);
       setIsProcessing(false);
     }
   };
-
-  // Google accounts arrive verified. An unverified email/password account gets
-  // stopped here rather than at login -- see VerifyEmailGate for why.
-  if (!isVerified) {
-    return <VerifyEmailGate />;
-  }
 
   // Success Screen
   if (currentStep === 4) {
@@ -171,7 +169,7 @@ const Checkout = () => {
             <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-2xl p-6 mb-6">
               <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-2">Order ID</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 text-center font-mono tracking-wider">
-                {orderId}
+                {orderNumber}
               </p>
             </div>
 
@@ -182,7 +180,7 @@ const Checkout = () => {
               </div>
               <div className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                 <span className="text-gray-600 dark:text-gray-400">Total Amount</span>
-                <span className="text-2xl font-bold text-green-600 dark:text-green-400">{formatPriceSimple(total)}</span>
+                <span className="text-2xl font-bold text-green-600 dark:text-green-400">{formatRupees(total)}</span>
               </div>
               <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Delivery Address</p>
@@ -280,7 +278,7 @@ const Checkout = () => {
               {/* Cart Items */}
               {items.map((item, index) => (
                 <motion.div
-                  key={`${item.id}-${item.size}`}
+                  key={`${item.productId}-${item.variantId}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
@@ -293,13 +291,7 @@ const Checkout = () => {
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-2xl" />
                       ) : (
                         <span className="text-4xl">
-                          {item.category === 'daal' && '🥘'}
-                          {item.category === 'rice' && '🍚'}
-                          {item.category === 'flour' && '🌾'}
-                          {item.category === 'spices' && '🌶️'}
-                          {item.category === 'snacks' && '🍿'}
-                          {item.category === 'grocery' && '🛍️'}
-                        </span>
+                          </span>
                       )}
                     </div>
 
@@ -309,24 +301,24 @@ const Checkout = () => {
                       <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{item.nameHindi || 'original fresh'}</p>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="inline-block px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs sm:text-sm font-semibold rounded">
-                          {item.size || '1kg'}
+                          {item.variantLabel}
                         </span>
                         <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          {formatPriceSimple(item.price)} each
+                          {formatRupees(item.price)} each
                         </span>
                       </div>
                       <div className="flex items-center gap-4">
                         {/* Quantity Controls */}
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => updateQuantity(item.id, item.size, Math.max(1, item.quantity - 1))}
+                            onClick={() => updateQuantity(item.productId, item.variantId, Math.max(1, item.quantity - 1))}
                             className="w-8 h-8 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
                           <span className="w-8 text-center font-bold text-gray-900 dark:text-white">{item.quantity}</span>
                           <button
-                            onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.productId, item.variantId, item.quantity + 1)}
                             className="w-8 h-8 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors"
                           >
                             <Plus className="w-4 h-4" />
@@ -334,11 +326,11 @@ const Checkout = () => {
                         </div>
 
                         {/* Price */}
-                        <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{formatPriceSimple(item.price)}</p>
+                        <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{formatRupees(item.price * item.quantity)}</p>
 
                         {/* Delete */}
                         <button
-                          onClick={() => removeItem(item.id, item.size)}
+                          onClick={() => removeItem(item.productId, item.variantId)}
                           className="ml-auto text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                         >
                           <Trash2 className="w-5 h-5" />
@@ -357,10 +349,10 @@ const Checkout = () => {
                     value={discountCode}
                     onChange={(e) => setDiscountCode(e.target.value)}
                     placeholder="Enter Discount Code"
-                    disabled={discountApplied}
+                    disabled={Boolean(appliedCoupon) || checkingCoupon}
                     className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
                   />
-                  {discountApplied ? (
+                  {appliedCoupon ? (
                     <button
                       onClick={handleRemoveDiscount}
                       className="px-6 py-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex items-center gap-2"
@@ -371,13 +363,14 @@ const Checkout = () => {
                   ) : (
                     <button
                       onClick={handleApplyDiscount}
-                      className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors"
+                      disabled={checkingCoupon || !discountCode.trim()}
+                      className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50"
                     >
-                      Apply
+                      {checkingCoupon ? 'Checking...' : 'Apply'}
                     </button>
                   )}
                 </div>
-                {discountApplied && (
+                {appliedCoupon && (
                   <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
                     <Check className="w-4 h-4" />
                     Discount code applied successfully!
@@ -390,18 +383,18 @@ const Checkout = () => {
                 <div className="space-y-3 mb-4">
                   <div className="flex justify-between text-gray-600 dark:text-gray-400">
                     <span>Subtotal</span>
-                    <span className="font-bold">{formatPriceSimple(subtotal)}</span>
+                    <span className="font-bold">{formatRupees(subtotal)}</span>
                   </div>
-                  {discountApplied && (
+                  {appliedCoupon && (
                     <div className="flex justify-between text-green-600 dark:text-green-400">
-                      <span>Discount (10%)</span>
-                      <span className="font-bold">- {formatPriceSimple(discount)}</span>
+                      <span>Discount ({appliedCoupon?.code})</span>
+                      <span className="font-bold">- {formatRupees(discount)}</span>
                     </div>
                   )}
                   <div className="h-px bg-gray-200 dark:bg-gray-700"></div>
                   <div className="flex justify-between text-xl font-bold text-gray-900 dark:text-white">
                     <span>Total</span>
-                    <span className="text-green-600 dark:text-green-400">{formatPriceSimple(total)}</span>
+                    <span className="text-green-600 dark:text-green-400">{formatRupees(total)}</span>
                   </div>
                 </div>
 
@@ -428,7 +421,7 @@ const Checkout = () => {
             >
               <AddressManager
                 onSelectAddress={setSelectedAddress}
-                selectedAddressId={selectedAddress?.id}
+                selectedAddressId={selectedAddress?._id}
               />
 
               {/* Continue Button */}

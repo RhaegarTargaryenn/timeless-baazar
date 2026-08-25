@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { HiSearch, HiCheckCircle, HiClock, HiTruck, HiX } from 'react-icons/hi';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
-import { formatPriceSimple } from '../utils/helpers';
+import { api, formatRupees } from '../lib/api';
 import toast from 'react-hot-toast';
 
 const OrderTracking = () => {
@@ -16,47 +14,29 @@ const OrderTracking = () => {
   const { user } = useAuth();
 
   // ProtectedRoute guarantees a signed-in user by the time this renders, so
-  // this only has to fetch -- no auth subscription of its own.
+  // this only has to fetch. Orders come from the API now, not Firestore.
   useEffect(() => {
-    if (!user) return;
+    if (!user) return undefined;
 
-    let cancelled = false;
+    const controller = new AbortController();
 
     const loadOrders = async () => {
       setLoading(true);
       try {
-        const snapshot = await getDocs(
-          query(collection(db, 'orders'), where('userId', '==', user.uid))
-        );
-
-        const orders = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            ...data,
-            orderDate:
-              data.orderDate ||
-              data.createdAt?.toDate?.()?.toISOString() ||
-              new Date().toISOString(),
-          };
-        });
-
-        orders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
-
-        if (!cancelled) setMyOrders(orders);
+        const { orders } = await api.get('/orders', { signal: controller.signal });
+        setMyOrders(orders);
       } catch (error) {
+        if (error.name === 'AbortError') return;
         console.error('Failed to load orders:', error);
-        if (!cancelled) toast.error('Could not load your orders.');
+        toast.error('Could not load your orders.');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     loadOrders();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, [user]);
 
   const handleSearch = (e) => {
@@ -67,23 +47,14 @@ const OrderTracking = () => {
     }
 
     // Search in user's orders from Firestore
-    const foundOrder = myOrders.find(o => o.orderId === orderId.trim());
+    const foundOrder = myOrders.find(o => o.orderNumber === orderId.trim().toUpperCase());
     
     if (foundOrder) {
       setOrder(foundOrder);
       setNotFound(false);
     } else {
-      // Also check localStorage for backward compatibility
-      const localOrders = JSON.parse(localStorage.getItem('timeless-baazar-orders') || '[]');
-      const localOrder = localOrders.find(o => o.orderId === orderId.trim());
-      
-      if (localOrder) {
-        setOrder(localOrder);
-        setNotFound(false);
-      } else {
-        setOrder(null);
-        setNotFound(true);
-      }
+      setOrder(null);
+      setNotFound(true);
     }
   };
 
@@ -165,7 +136,7 @@ const OrderTracking = () => {
                 type="text"
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
-                placeholder="Enter Order ID (e.g., TB1738275423999123)"
+                placeholder="Enter Order ID (e.g. TB-2508-0001)"
                 className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-accent-500 transition-colors"
                 required
               />
@@ -234,7 +205,7 @@ const OrderTracking = () => {
               <div className="flex items-start justify-between pb-6 border-b border-gray-200">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                    Order ID #{order.orderId}
+                    Order ID #{order.orderNumber}
                   </h2>
                   <p className="text-sm text-gray-500">
                     {new Date(order.orderDate).toLocaleDateString('en-IN', {
@@ -352,12 +323,12 @@ const OrderTracking = () => {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 truncate">{item.name}</p>
                         <p className="text-sm text-gray-600">
-                          {item.size} × {item.quantity}
+                          {item.variantLabel} × {item.quantity}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-gray-900">
-                          {formatPriceSimple(item.price * item.quantity)}
+                          {formatRupees(item.price * item.quantity)}
                         </p>
                         <p className="text-xs text-gray-500">Quantity: {item.quantity}</p>
                       </div>
@@ -374,7 +345,7 @@ const OrderTracking = () => {
                   <div className="flex justify-between items-center">
                     <p className="text-sm text-gray-600">Subtotal</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {formatPriceSimple(order.subtotal || order.total)}
+                      {formatRupees(order.subtotal || order.total)}
                     </p>
                   </div>
                   
@@ -382,7 +353,7 @@ const OrderTracking = () => {
                     <div className="flex justify-between items-center">
                       <p className="text-sm text-gray-600">Discount</p>
                       <p className="text-sm font-medium text-green-600">
-                        -{formatPriceSimple(order.discount)}
+                        -{formatRupees(order.discount)}
                       </p>
                     </div>
                   )}
@@ -391,7 +362,7 @@ const OrderTracking = () => {
                     <div className="flex justify-between items-center">
                       <p className="text-base font-semibold text-gray-900">Total</p>
                       <p className="text-xl font-bold text-green-600">
-                        {formatPriceSimple(order.total)}
+                        {formatRupees(order.total)}
                       </p>
                     </div>
                   </div>
@@ -403,7 +374,7 @@ const OrderTracking = () => {
                 <p className="text-sm text-gray-600 text-center mb-4">Need help with your order?</p>
                 <div className="flex gap-3">
                   <a
-                    href={`https://wa.me/919266667069?text=Hi, I have a query about Order ID: ${order.orderId}`}
+                    href={`https://wa.me/919266667069?text=Hi, I have a query about Order ID: ${order.orderNumber}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1"
@@ -443,7 +414,7 @@ const OrderTracking = () => {
                     key={orderItem.id}
                     whileHover={{ scale: 1.01 }}
                     onClick={() => {
-                      setOrderId(orderItem.orderId);
+                      setOrderId(orderItem.orderNumber);
                       setOrder(orderItem);
                       setNotFound(false);
                     }}
@@ -452,7 +423,7 @@ const OrderTracking = () => {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <p className="text-sm text-gray-600">Order ID</p>
-                        <p className="text-lg font-bold text-gray-900 font-mono">{orderItem.orderId}</p>
+                        <p className="text-lg font-bold text-gray-900 font-mono">{orderItem.orderNumber}</p>
                       </div>
                       <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${statusInfo.bgColor}`}>
                         <StatusIcon className={`w-4 h-4 ${statusInfo.color}`} />
@@ -463,7 +434,7 @@ const OrderTracking = () => {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="text-sm text-gray-600">
-                          {orderItem.items?.length || 0} items • {formatPriceSimple(orderItem.total)}
+                          {orderItem.items?.length || 0} items • {formatRupees(orderItem.total)}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {new Date(orderItem.orderDate).toLocaleDateString('en-IN', {

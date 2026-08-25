@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate,Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, Truck, DollarSign, ShieldCheck, ArrowRight, ShoppingCart } from 'lucide-react';
-import { categories } from '../data/products';
+import { useProducts } from '../hooks/useProducts';
 
 
 const Home = () => {
   const navigate = useNavigate();
+  const { categories } = useProducts();
   
   // Rotating quotes
   const quotes = [
@@ -310,12 +311,12 @@ const Home = () => {
           <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 sm:gap-8">
             {categories.filter(cat => cat.id !== 'all').map((category, index) => (
               <motion.div
-                key={category.id}
+                key={category._id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.05 }}
                 whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
-                onClick={() => handleCategoryClick(category.id)}
+                onClick={() => handleCategoryClick(category.slug)}
                 className="cursor-pointer flex flex-col items-center"
               >
                 {/* Category Image - Clean Icon Style */}

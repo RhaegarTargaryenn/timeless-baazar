@@ -21,7 +21,7 @@ export default defineConfig({
         // app code. Splitting them out keeps them cached across deploys instead
         // of being re-downloaded every time a component changes.
         manualChunks: {
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          firebase: ['firebase/app', 'firebase/auth'],
           motion: ['framer-motion'],
           router: ['react-router-dom'],
         },
