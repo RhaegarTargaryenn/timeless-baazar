@@ -9,6 +9,11 @@ import config from './config/env.js';
 import { attachUser } from './middleware/auth.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
+import categoryRoutes from './routes/categories.js';
+import productRoutes from './routes/products.js';
+import orderRoutes from './routes/orders.js';
+import couponRoutes from './routes/coupons.js';
+
 export const createApp = () => {
   const app = express();
 
@@ -69,10 +74,10 @@ export const createApp = () => {
   // what to do about it.
   app.use(attachUser);
 
-  // Routes are mounted in Phase 2 once the schema is settled:
-  //   app.use('/api/products', productRoutes);
-  //   app.use('/api/orders', orderRoutes);
-  //   app.use('/api/coupons', couponRoutes);
+  app.use('/api/categories', categoryRoutes);
+  app.use('/api/products', productRoutes);
+  app.use('/api/orders', orderRoutes);
+  app.use('/api/coupons', couponRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

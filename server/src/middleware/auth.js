@@ -21,6 +21,7 @@ export const attachUser = async (req, _res, next) => {
   const token = readToken(req);
   if (!token) {
     req.user = null;
+    req.isAdmin = false;
     return next();
   }
 
@@ -32,11 +33,15 @@ export const attachUser = async (req, _res, next) => {
       emailVerified: Boolean(decoded.email_verified),
       name: decoded.name ?? null,
     };
+    // Read-only routes use this to decide whether to include hidden rows.
+    // Writes still go through requireAdmin -- this flag never grants anything.
+    req.isAdmin = config.adminUids.includes(decoded.uid);
   } catch {
     // A malformed or expired token is treated as "not signed in" rather than
     // an error: an expired token during a long session is normal, and the
     // client refreshes and retries.
     req.user = null;
+    req.isAdmin = false;
   }
 
   return next();
