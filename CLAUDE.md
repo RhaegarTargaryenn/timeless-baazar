@@ -32,7 +32,14 @@ npm run preview  # serve the production build
 
 ## Current state
 
-Phase 0 (foundation) is done. Phase 1 (auth) is in progress. Products are still
-hardcoded in `src/data/products.js` and orders still go to Firestore — both move
-to a MongoDB-backed API in Phases 2–4. Do not build on the assumption that
-either is permanent.
+Phases 0 (foundation) and 1 (auth) are done. Phase 2 (backend + MongoDB) is next.
+
+Products are still hardcoded in `src/data/products.js` and orders still go to
+Firestore — both move to a MongoDB-backed API in Phases 2–4. Do not build on the
+assumption that either is permanent.
+
+Auth has exactly one subscription, in `src/context/AuthContext.jsx`. Never call
+`onAuthStateChanged` anywhere else — several components each having their own is
+what made login unreliable in the first place. Guard routes with
+`ProtectedRoute`, and always wait on `loading` before deciding someone is signed
+out.

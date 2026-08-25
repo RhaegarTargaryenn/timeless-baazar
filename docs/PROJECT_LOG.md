@@ -46,8 +46,8 @@ without calling anyone.**
 ## Where we are
 
 - [x] **Phase 0 — Foundation** ✅ done 2026-08-25
-- [ ] **Phase 1 — Auth fix** ← in progress
-- [ ] **Phase 2 — Backend + MongoDB**
+- [x] **Phase 1 — Auth fix** ✅ done 2026-08-25
+- [ ] **Phase 2 — Backend + MongoDB** ← next
 - [ ] **Phase 3 — Admin panel** ← *this is the phase that solves the real problem*
 - [ ] **Phase 4 — Storefront rewired to the API**
 - [ ] **Phase 5 — UI rebuild, mobile-first**
@@ -95,6 +95,54 @@ Commits: `e576208`, `c912657`, `737ecf2`
   the admin panel owns availability.
 - **`AddressManager` writes Firestore sequentially** in a loop when setting a
   default address. Should be a batch — but the file is rewritten in Phase 4.
+
+---
+
+## Phase 1 — Auth fix ✅
+
+Commit: `4b52cac`
+
+**The diagnosis.** "Login is unreliable" was never Firebase. Header, Checkout
+and OrderTracking each ran their own `onAuthStateChanged`. Firebase resolves
+those listeners independently, so on a refresh Checkout could conclude nobody
+was signed in while the header already knew otherwise — that is how a signed-in
+user got thrown to `/login` with a "please login to checkout" toast. Login then
+navigated after a bare `setTimeout(300)`, racing the same listeners.
+
+**What was built**
+
+- `src/context/AuthContext.jsx` — the single subscription for the whole app.
+  Exposes `user`, `loading`, `isSignedIn`, `isVerified`, `signOut`,
+  `refreshUser`, `resendVerificationEmail`.
+  *Every consumer must wait on `loading`.* Rendering a logged-out state before
+  Firebase has restored the session is the flicker users read as "it logged me
+  out".
+- `src/components/ProtectedRoute.jsx` — guards `/checkout` and `/track-order`.
+  Waits on `loading` before redirecting. The intended destination travels in
+  router state, not a `sessionStorage` returnUrl that could outlive an
+  abandoned attempt.
+- `src/components/VerifyEmailGate.jsx` — the new checkout-time verification
+  screen.
+- Header, Checkout and OrderTracking now consume the context; their own
+  listeners, redirects and `console.log` tracing are gone.
+
+**Verification moved from login to checkout**
+
+- Login no longer signs unverified accounts back out.
+- Signup still sends the mail but stays signed in, so people can browse and
+  build a cart immediately. The send is best-effort and cannot fail the signup.
+- Unverified email/password accounts hit `VerifyEmailGate` at checkout — the
+  point where a working email actually matters. It offers resend and re-check.
+  `refreshUser()` reloads from Firebase because `user.emailVerified` is a token
+  snapshot and keeps reading `false` after the link is clicked otherwise.
+- **Google sign-in is now primary** on both pages; email is collapsed behind a
+  link. Google accounts arrive verified and never see the gate.
+- Forgot-password was a dead button. It sends a reset mail now.
+
+**Tested:** signed-out `/checkout` and `/track-order` both redirect cleanly, no
+flash, no error toast, console clean.
+**Not tested:** the signed-in path — needs a manual pass with real Google
+credentials.
 
 ---
 
