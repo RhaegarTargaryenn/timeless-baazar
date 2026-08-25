@@ -12,6 +12,7 @@ import {
   sendEmailVerification,
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
+import { api } from '../lib/api';
 
 /**
  * One auth subscription for the whole app.
@@ -40,6 +41,17 @@ export const AuthProvider = ({ children }) => {
   // has restored the session is the flicker users read as "it logged me out".
   const [loading, setLoading] = useState(true);
 
+  /**
+   * The server's view of this account, from GET /api/me.
+   *
+   * Admin rights live in the server's ADMIN_UIDS, so the browser cannot work
+   * them out alone. `profileLoading` gets its own flag because the admin routes
+   * must wait for *this* answer, not just for Firebase — redirecting on a
+   * not-yet-known isAdmin would bounce the client out of their own panel.
+   */
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
@@ -48,6 +60,33 @@ export const AuthProvider = ({ children }) => {
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      setProfileLoading(false);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setProfileLoading(true);
+
+    api
+      .get('/me', { signal: controller.signal })
+      .then((data) => setProfile(data.user))
+      .catch((error) => {
+        if (error.name === 'AbortError') return;
+        // The storefront works without the API (Render's free tier sleeps), so
+        // a failure here means "not an admin", not a broken session.
+        console.warn('Could not load profile:', error.message);
+        setProfile(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setProfileLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [user]);
 
   const signOut = useCallback(() => firebaseSignOut(auth), []);
 
@@ -85,11 +124,15 @@ export const AuthProvider = ({ children }) => {
       // unverified, and we only care at checkout.
       isVerified: Boolean(user?.emailVerified),
 
+      profile,
+      profileLoading,
+      isAdmin: Boolean(profile?.isAdmin),
+
       signOut,
       refreshUser,
       resendVerificationEmail,
     }),
-    [user, loading, signOut, refreshUser, resendVerificationEmail]
+    [user, loading, profile, profileLoading, signOut, refreshUser, resendVerificationEmail]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

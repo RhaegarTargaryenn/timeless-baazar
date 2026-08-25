@@ -13,6 +13,7 @@ import categoryRoutes from './routes/categories.js';
 import productRoutes from './routes/products.js';
 import orderRoutes from './routes/orders.js';
 import couponRoutes from './routes/coupons.js';
+import meRoutes from './routes/me.js';
 
 export const createApp = () => {
   const app = express();
@@ -33,6 +34,13 @@ export const createApp = () => {
         if (!origin) return callback(null, true);
 
         if (config.corsOrigins.includes(origin)) return callback(null, true);
+
+        // In development Vite picks whatever port is free, so pinning exact
+        // localhost ports just breaks the dev server at random. Production
+        // stays restricted to the configured list.
+        if (!config.isProduction && /^http:\/\/localhost:\d+$/.test(origin)) {
+          return callback(null, true);
+        }
 
         return callback(new Error(`Origin not allowed: ${origin}`));
       },
@@ -74,6 +82,7 @@ export const createApp = () => {
   // what to do about it.
   app.use(attachUser);
 
+  app.use('/api/me', meRoutes);
   app.use('/api/categories', categoryRoutes);
   app.use('/api/products', productRoutes);
   app.use('/api/orders', orderRoutes);

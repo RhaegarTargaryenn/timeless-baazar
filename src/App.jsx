@@ -1,9 +1,10 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import Header from './components/Header';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import './App.css';
@@ -15,6 +16,14 @@ const Checkout = lazy(() => import('./pages/Checkout'));
 const OrderTracking = lazy(() => import('./pages/OrderTracking'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
+
+// The admin panel ships as its own chunk: customers never download it, and it
+// lives in this app rather than a separate one so the API client, auth and
+// design tokens stay in one place.
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminProducts = lazy(() => import('./pages/admin/AdminProducts'));
+const AdminProductForm = lazy(() => import('./pages/admin/AdminProductForm'));
+const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
@@ -54,6 +63,20 @@ function App() {
                 />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+
+                <Route
+                  path="/admin"
+                  element={
+                    <AdminRoute>
+                      <AdminLayout />
+                    </AdminRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="/admin/products" replace />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="products/:id" element={<AdminProductForm />} />
+                  <Route path="coupons" element={<AdminCoupons />} />
+                </Route>
               </Routes>
             </Suspense>
           </main>
