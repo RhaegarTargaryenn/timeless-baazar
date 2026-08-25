@@ -199,29 +199,29 @@ file) instead of `server/.env`. It was moved. It happened to be named
 carried the `VITE_` prefix, the database password would have shipped to every
 visitor's browser. Worth remembering: **anything `VITE_`-prefixed is public.**
 
-### ▶ Resume here — exactly where we stopped
+### Environment is complete and the API boots ✅
 
-`server/.env` still needs two values. Everything else in it is filled in.
+`server/.env` is fully populated and the server comes up clean:
 
-1. **`FIREBASE_SERVICE_ACCOUNT`**
-   Firebase Console → Project Settings → Service accounts →
-   *Generate new private key* → a `.json` downloads.
-   Convert it to one line and paste the output after the `=`:
-   ```bash
-   node -e "console.log(JSON.stringify(require('C:/path/to/key.json')))"
-   ```
-   Do not commit the `.json` itself — `server/.gitignore` already blocks the
-   usual filenames.
-
-2. **`ADMIN_UIDS`**
-   Firebase Console → Authentication → Users → copy the User UID.
-   Use the developer's own UID while testing; swap in the client's at handoff.
-
-Then:
-```bash
-cd server && npm run dev
-curl http://localhost:4000/health     # expect {"status":"ok","db":"connected"}
 ```
+[db] connected to MongoDB
+[api] listening on :4000 (development)
+
+GET /health    -> {"status":"ok","db":"connected"}
+GET /api/nope  -> {"error":"No route for GET /api/nope"}
+```
+
+The Firebase service account JSON was downloaded to the **project root**. It was
+not covered by any ignore rule — a `git add -A` would have committed a private
+key that can mint admin tokens for the whole Firebase project. Root `.gitignore`
+now blocks `*firebase-adminsdk*.json` and `*serviceAccount*.json`; git history
+confirms it was never committed. The key's contents live in `server/.env`, so
+**the .json file itself can be deleted or moved out of the repo.**
+
+`ADMIN_UIDS` currently holds the developer's own UID for testing. Swap in the
+client's at handoff.
+
+### ▶ Resume here
 
 ### Then — the actual Phase 2 work, none of which has started
 

@@ -33,8 +33,8 @@ npm run preview  # serve the production build
 ## Current state
 
 Phases 0 (foundation) and 1 (auth) are done. Phase 2 (backend + MongoDB) is
-paused part-way: the Atlas cluster is live and the Express skeleton exists in
-`server/`, but there are no models or routes yet. `docs/PROJECT_LOG.md` has a
+part-way: the Atlas cluster is live, `server/.env` is complete and the API
+boots clean on :4000, but there are no models or routes yet. `docs/PROJECT_LOG.md` has a
 "Resume here" section with the exact next step.
 
 Products are still hardcoded in `src/data/products.js` and orders still go to
