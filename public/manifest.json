@@ -4,11 +4,6 @@
   "description": "Premium quality groceries delivered with care. Fresh from farm to your doorstep.",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
       "src": "icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
@@ -23,8 +18,8 @@
   ],
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#FF9800",
-  "background_color": "#FFF3E0",
+  "theme_color": "#16A34A",
+  "background_color": "#F0FDF4",
   "orientation": "portrait-primary",
   "categories": ["shopping", "food", "lifestyle"],
   "scope": "/",

@@ -65,7 +65,7 @@ const OrderTracking = () => {
             toast.success(`${orders.length} order(s) loaded!`, { duration: 2000 });
           } else {
             console.log('ℹ️ No orders found for this user');
-            toast.info('No orders found', { duration: 2000 });
+            toast('No orders found', { duration: 2000 });
           }
         } catch (error) {
           console.error('❌ Error fetching orders:', error);

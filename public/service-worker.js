@@ -1,13 +1,14 @@
 /* eslint-disable no-restricted-globals */
 // Service Worker for Timeless Baazar PWA
 
-const CACHE_NAME = 'timeless-baazar-v1';
+const CACHE_NAME = 'timeless-baazar-v2';
+
+// Sirf wahi files jo build output me guaranteed hain. Hashed JS/CSS runtime par
+// fetch handler cache karta hai. cache.addAll() atomic hai -- ek 404 poori
+// precache gira deta hai, isliye yahan kuch bhi speculative mat daalna.
 const urlsToCache = [
   '/',
   '/index.html',
-  '/static/css/main.css',
-  '/static/js/main.js',
-  '/favicon.ico',
   '/icon-192.png',
   '/icon-512.png'
 ];
@@ -46,39 +47,47 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event
+// Navigations: network-first, taki naya deploy turant mile (cache-first me user
+// hamesha purana index.html dekhta reh jaata tha).
+// Static assets: cache-first, kyunki unke naam hashed hain -- badle to naam badlega.
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
+  const { request } = event;
+
+  // GET ke alawa kuch bhi cache mat karo (orders, auth, Sheets ke POST).
+  if (request.method !== 'GET') return;
+
+  // Cross-origin (Firebase, Google Sheets, fonts) seedha network par jaaye.
+  if (new URL(request.url).origin !== self.location.origin) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
           return response;
-        }
+        })
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
 
-        // Clone the request
-        const fetchRequest = event.request.clone();
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
 
-        return fetch(fetchRequest).then((response) => {
-          // Check if valid response
+      return fetch(request)
+        .then((response) => {
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response;
           }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
-        }).catch(() => {
-          // Network failed, try to return offline page if available
-          return caches.match('/index.html');
-        });
-      })
+        })
+        .catch(() => caches.match('/index.html'));
+    })
   );
 });
 
@@ -107,4 +116,12 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.openWindow('/')
   );
+});
+
+// index.js naya version milne par SKIP_WAITING bhejta hai -- pehle iska koi
+// listener hi nahi tha, isliye update kabhi activate nahi hota tha.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

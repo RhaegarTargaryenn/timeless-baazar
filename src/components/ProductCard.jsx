@@ -3,6 +3,7 @@ import { Plus, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import useCartStore from '../store/cartStore';
 import { formatPriceSimple } from '../utils/helpers';
+import { isPurchasable } from '../data/products';
 import ProductDetailsModal from './ProductDetailsModal';
 
 const CATEGORY_EMOJI = {
@@ -18,10 +19,9 @@ const ProductCard = memo(({ product }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const getItemQuantity = useCartStore(state => state.getItemQuantity);
 
-  const isComingSoon = product.priceStatus === 'coming_soon' || product.id >= 43;
   const currentPrice = product.price1kg;
   const originalPrice = currentPrice ? Math.round(currentPrice / 0.8) : 0; // Mock 20% discount
-  const canPurchase = !isComingSoon && Number.isFinite(currentPrice) && currentPrice > 0;
+  const canPurchase = isPurchasable(product, '1kg');
   const inCartQuantity = getItemQuantity(product.id, '1kg');
   const discountPercent = canPurchase ? 20 : 0;
 

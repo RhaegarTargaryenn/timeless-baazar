@@ -24,8 +24,11 @@ const useCartStore = create(
 
         if (existingItemIndex > -1) {
           // Update quantity if item exists
-          const updatedItems = [...items];
-          updatedItems[existingItemIndex].quantity += quantity;
+          const updatedItems = items.map((item, index) =>
+            index === existingItemIndex
+              ? { ...item, quantity: item.quantity + quantity }
+              : item
+          );
           set({ items: updatedItems });
         } else {
           // Add new item

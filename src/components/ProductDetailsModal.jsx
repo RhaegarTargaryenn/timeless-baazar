@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import useCartStore from '../store/cartStore';
 import { formatPriceSimple } from '../utils/helpers';
+import { isPurchasable } from '../data/products';
 
 const CATEGORY_EMOJI = { daal: '🥘', rice: '🍚', flour: '🌾', spices: '🌶️', snacks: '🍿', grocery: '🛍️' };
 const SIZES = [{ value: '1kg', label: '1 Kg' }, { value: '500g', label: '500g' }];
@@ -14,10 +15,9 @@ const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const addItem = useCartStore(state => state.addItem);
 
-  const isComingSoon = product?.priceStatus === 'coming_soon' || product?.id >= 43;
   const currentPrice = selectedSize === '1kg' ? product?.price1kg : product?.price500g;
   const originalPrice = currentPrice ? Math.round(currentPrice / 0.8) : 0; // Mock 20% discount
-  const canPurchase = !isComingSoon && Number.isFinite(currentPrice) && currentPrice > 0;
+  const canPurchase = isPurchasable(product, selectedSize);
 
   const handleAddToCart = () => {
     if (!canPurchase) {

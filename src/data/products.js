@@ -9,7 +9,7 @@ const baseProducts = [
     price1kg: 132,
     price500g: 66,
     description: 'Premium quality Toor Dal / Arhar Dal',
-    image: "/Products/toor_dal.jpg",
+    image: "/Products/Toor_dal.jpg",
   },
   {
     id: 2,
@@ -39,7 +39,7 @@ const baseProducts = [
     price1kg: 82,
     price500g: 41,
     description: 'Split Bengal gram',
-    image: "/Products/Chana_dal.jpg",
+    image: "/Products/Chana_Dal.jpg",
   },
   {
     id: 5,
@@ -723,19 +723,25 @@ const baseProducts = [
   },
 ];
 
-export const products = baseProducts.map((product) => {
-  // Products added in the latest update cycle keep placeholder pricing.
-  if (product.id >= 43) {
-    return {
-      ...product,
-      price1kg: null,
-      price500g: null,
-      priceStatus: 'coming_soon',
-    };
-  }
+// Products from this id onward are not yet approved for sale by the client.
+// Their prices exist in baseProducts but are withheld until confirmed.
+// SINGLE SOURCE OF TRUTH: components must read `priceStatus`, never the id.
+// TODO(phase-2): drop this entirely once products live in MongoDB and the
+// admin panel controls availability via an `isActive` flag.
+const UNCONFIRMED_PRICE_FROM_ID = 43;
 
-  return product;
-});
+export const products = baseProducts.map((product) =>
+  product.id >= UNCONFIRMED_PRICE_FROM_ID
+    ? { ...product, price1kg: null, price500g: null, priceStatus: 'coming_soon' }
+    : { ...product, priceStatus: 'available' }
+);
+
+/** True when the product can actually be added to the cart at `size`. */
+export const isPurchasable = (product, size = '1kg') => {
+  if (!product || product.priceStatus !== 'available') return false;
+  const price = size === '1kg' ? product.price1kg : product.price500g;
+  return Number.isFinite(price) && price > 0;
+};
 
 export const categories = [
   { 
