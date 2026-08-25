@@ -15,12 +15,13 @@ const TABS = [
 ];
 
 /**
- * A floating pill rather than a full-width bar.
+ * A floating pill rather than a full-width bar: it reads as part of the app
+ * rather than part of the phone, and the page scrolls visibly underneath.
  *
- * It reads as part of the app rather than part of the phone, and the page
- * scrolls visibly underneath it. The active tab is marked by a shared pill
- * that slides between positions via `layoutId` — one element moving, not four
- * fading, which is what makes the transition feel physical.
+ * Icons only. Labels made the pill wide enough to cover product cards, and on a
+ * four-tab bar the icons carry the meaning on their own — the active one is
+ * marked by a light disc that slides between positions via `layoutId`, so it is
+ * one object moving rather than four crossfading.
  */
 const BottomNav = () => {
   const count = useCartStore((state) =>
@@ -32,53 +33,36 @@ const BottomNav = () => {
       className="sm:hidden fixed inset-x-0 bottom-0 z-40 pointer-events-none flex justify-center px-4"
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
-      <nav className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-full bg-forest shadow-float">
+      <nav className="pointer-events-auto flex items-center gap-1 p-2 rounded-full bg-forest shadow-float">
         {TABS.map(({ to, label, icon: Icon, end, badge }) => (
-          <NavLink key={to} to={to} end={end} aria-label={label}>
+          <NavLink key={to} to={to} end={end} aria-label={label} title={label}>
             {({ isActive }) => (
               <motion.span
                 whileTap={tap}
                 className={cx(
-                  'relative flex items-center justify-center gap-2 h-12 rounded-full transition-colors',
-                  isActive ? 'px-4 text-forest' : 'px-4 text-white/60'
+                  'relative flex items-center justify-center w-14 h-12 rounded-full transition-colors',
+                  isActive ? 'text-forest' : 'text-white/55'
                 )}
               >
                 {isActive && (
                   <motion.span
-                    layoutId="nav-pill"
+                    layoutId="nav-disc"
                     transition={spring.layout}
-                    className="absolute inset-0 rounded-full bg-white"
+                    className="absolute inset-0 rounded-full bg-brand-100"
                   />
                 )}
 
-                <span className="relative flex items-center gap-2">
-                  <span className="relative">
-                    <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                    {badge && count > 0 && (
-                      <motion.span
-                        key={count}
-                        initial={{ scale: 0.4, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={spring.snappy}
-                        className={cx(
-                          'absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center',
-                          isActive ? 'bg-coral text-white' : 'bg-coral text-white'
-                        )}
-                      >
-                        {count > 9 ? '9+' : count}
-                      </motion.span>
-                    )}
-                  </span>
-
-                  {/* The label appears only on the active tab, so the pill stays compact */}
-                  {isActive && (
+                <span className="relative">
+                  <Icon className="w-[22px] h-[22px]" strokeWidth={isActive ? 2.6 : 2} />
+                  {badge && count > 0 && (
                     <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      transition={{ duration: 0.2 }}
-                      className="text-sm font-bold whitespace-nowrap overflow-hidden"
+                      key={count}
+                      initial={{ scale: 0.4, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={spring.snappy}
+                      className="absolute -top-2 -right-2.5 min-w-[17px] h-[17px] px-1 rounded-full bg-coral text-white text-[10px] font-bold flex items-center justify-center"
                     >
-                      {label}
+                      {count > 9 ? '9+' : count}
                     </motion.span>
                   )}
                 </span>
