@@ -151,16 +151,11 @@ const Home = () => {
         </div>
 
         {/* The scalloped edge of the white sheet, cutting into the green */}
-        <ScallopedSeam
-          count={8}
-          depth={30}
-          className="block w-full h-8 -mb-px text-surface"
-          fill="currentColor"
-        />
+        <ScallopedSeam />
       </div>
 
       {/* ── Content ──────────────────────────────────────────────────────── */}
-      <div className="bg-surface pt-4 pb-32 sm:pb-8">
+      <div className="bg-surface pt-4 pb-36 sm:pb-8">
         <SectionHead title="You might need" to="/products" />
 
         {/*
@@ -171,7 +166,7 @@ const Home = () => {
         {loading ? (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="shrink-0 w-[150px] border border-line rounded-card p-2.5">
+              <div key={index} className="shrink-0 w-[158px] border border-line rounded-card p-2.5">
                 <Skeleton className="aspect-square rounded-xl mb-2" />
                 <Skeleton className="h-3.5 w-4/5 mb-1.5" />
                 <Skeleton className="h-5 w-1/2 mb-2.5" />
@@ -187,7 +182,7 @@ const Home = () => {
             className="flex gap-3 overflow-x-auto scrollbar-hide snap-row px-4 pb-1"
           >
             {featured.map((product) => (
-              <div key={product._id} className="shrink-0 w-[150px]">
+              <div key={product._id} className="shrink-0 w-[158px]">
                 <ProductCard product={product} />
               </div>
             ))}

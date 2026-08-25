@@ -108,7 +108,7 @@ const Cart = () => {
         )}
       </ForestHeader>
 
-      <Sheet className="px-4 pt-5 pb-32 sm:pb-8">
+      <Sheet className="px-4 pt-5 pb-36 sm:pb-8">
         {items.length === 0 ? (
           <EmptyState
             icon={<ShoppingBag className="w-7 h-7" />}

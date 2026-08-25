@@ -105,7 +105,7 @@ const Products = () => {
         </div>
       </ForestHeader>
 
-      <Sheet className="px-4 pt-5 pb-28 sm:pb-8">
+      <Sheet className="px-4 pt-5 pb-36 sm:pb-8">
         {/*
           Shown only when the API is unreachable but a cached catalogue is on
           screen. Render's free tier sleeps, so this is ordinary — a quiet line,
