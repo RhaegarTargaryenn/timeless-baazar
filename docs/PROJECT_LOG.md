@@ -50,7 +50,7 @@ without calling anyone.**
 - [x] **Phase 2 — Backend + MongoDB** ✅ (Render deploy still pending)
 - [x] **Phase 3 — Admin panel** ✅ (image upload still pending)
 - [x] **Phase 4 — Storefront rewired to the API** ✅
-- [ ] **Phase 5 — UI rebuild, mobile-first** ← next
+- [~] **Phase 5 — UI rebuild, mobile-first** ← in progress
 - [ ] **Phase 6 — Handoff to client**
 
 ---
@@ -221,171 +221,104 @@ confirms it was never committed. The key's contents live in `server/.env`, so
 `ADMIN_UIDS` currently holds the developer's own UID for testing. Swap in the
 client's at handoff.
 
-### ▶ Resume here
+### Phase 5 — UI rebuild  IN PROGRESS
 
-### Schema — settled, seeded, and serving
+Commits: `2604151`, `3454914`, `9b506d8`, `0215c53`, `5508081`
 
-Commits: `d897976` (models + seed), `4655946` (routes).
+Reference: a screen recording of a Dribbble grocery-app mockup, on the Desktop
+as `Recording 2026-08-25 205055.mp4`. Frames come out with OpenCV (`cv2`) —
+ffmpeg is not installed on this machine.
 
-The client's answers and what they turned into:
+### Done
 
-| Answer | In the schema |
-|---|---|
-| Shop sells 500 g and 1 kg only | Two variants each — but as an **array**, not fixed `price500g`/`price1kg` columns. The day someone asks for a 5 kg rice pack, that is one array entry instead of migrating the collection, every saved cart and every order. The admin form shows two price fields either way. |
-| The 20% discount is fake, drop it | `mrp` exists but defaults to `null`, and no badge renders without one. The old storefront invented a list price as `price / 0.8`. |
-| Stock is just on/off | A boolean per variant. A shop that must decrement a count after each delivery stops doing it, and then the count lies. |
-| Categories should be editable | Their own collection, so adding "Oil" is not a code change and a redeploy. |
+**Design tokens.** `tailwind.config.js` + `src/index.css` hold one system:
+semantic surfaces (`surface`, `surface-raised`, `surface-sunken`, `line`, `ink`,
+`ink-muted`, `ink-faint`) driven by CSS variables, plus `brand`, `forest`,
+`coral`, `cream`. **Every hardcoded `gray-*` / `green-*` utility is gone from
+`src`.** The stylesheet went 62 kB to 38 kB.
 
-Decisions made without asking, because they are engineering, not business:
+Before this, two half-systems were fighting: a green palette in the config and
+orange left over in several components, plus `shadow-soft*` in the config and
+`shadow-smooth*` redefined again in the CSS.
 
-- **Money is integer paise.** `132.50 * 3` is `397.50000000000006` in
-  JavaScript. Display rounding hides it; the number written to an order does
-  not get rounded. Rupees convert at the edges.
-- **Order line items and the applied coupon are snapshots.** A price rise next
-  week must not rewrite what a customer paid last week.
-- **No `role` field on User.** Admin comes from `ADMIN_UIDS` in the
-  environment. A flag in the collection can be flipped by anything that can
-  write to the collection.
-- **Addresses are embedded in User**, so setting a default is one atomic update
-  rather than the loop of sequential writes the Firestore version used.
+**The forest layout.** `ForestHeader` paints the dark band; content sits on it
+as a white sheet. `ScallopedSeam` draws the wavy join as a CSS mask that tiles
+at a fixed 56px — an earlier version stretched a fixed number of arcs across
+the width, so tight scallops on a phone became huge waves on a desktop.
 
-**Seeded:** 71 products, 6 categories, **42 active / 29 inactive**. The 29 are
-the old `id >= 43` group — prices are real but unconfirmed, so they are seeded
-hidden and the client can flip each one on. Re-running the seed will not
-overwrite prices or availability changed since, because the source file is a
-frozen snapshot that would silently roll the client's edits back.
+**Motion.** `src/lib/motion.js` holds one easing and three springs, so the app
+moves with a single personality. Shared-element transitions via `layoutId` for
+the nav disc, size selector and filter underline — one object moving, not
+several crossfading. Grid stagger is capped; with 71 products an uncapped one
+leaves the last card arriving seconds after the first.
 
-### The API
+**Every screen converted:** Home, Products, Cart, Checkout, Orders, Login,
+Signup, VerifyEmailGate, the install prompt, and the whole admin panel.
 
-| Route | Access |
-|---|---|
-| `GET /api/products`, `/api/products/:slug` | public — hidden products and variants stripped |
-| `GET /api/categories` | public |
-| `POST/PATCH/DELETE /api/products`, `/api/categories` | admin |
-| `PATCH /api/products/:id/visibility` | admin — its own route so the toggle cannot clobber a price |
-| `POST /api/coupons/validate` | signed in |
-| `GET/POST/PATCH/DELETE /api/coupons` | admin |
-| `POST /api/orders`, `GET /api/orders`, `/api/orders/:orderNumber` | signed in |
-| `GET /api/orders/admin/all`, `PATCH /api/orders/:orderNumber/status` | admin |
+Not only repainted:
+- Checkout went from three steps to two — the first re-listed the cart, which
+  is its own page now.
+- Cart became a real page instead of a redirect to checkout.
+- Orders replaced "type your order number" with the customer's own order list
+  and a status trail.
+- The bottom nav is a floating pill; labels were dropped because they made it
+  wide enough to cover the product cards behind it.
 
-**`POST /api/orders` takes no prices** — only productId, variantId, quantity.
-Totals, availability and the discount are resolved server-side. This is the
-single most important property of the API and the smoke test asserts it
-directly.
+### Reverted
 
-Google Sheets moved off the browser into `services/sheets.js`. The old call used
-`mode:'no-cors'`, which cannot read a response — it logged "assumed success"
-regardless, so a broken Apps Script would have lost orders invisibly. The sync
-now retries with a backoff, records the outcome on the order, and
-`retryFailedSyncs()` replays anything still unsynced. It is fired without
-awaiting, so a Google outage cannot fail an order that is already saved.
+`bfcf63b` added a scalloped bottom edge to product cards; reverted in
+`5508081`. Worth remembering if it is attempted again: a CSS mask erases
+`box-shadow` along with everything else outside the shape, so the shadow has to
+move to a wrapper as `filter: drop-shadow`, which follows the alpha channel.
 
-### Checking it still works
+### Honest state
+
+Layout, tokens and motion are in place, but **the design does not match the
+reference closely yet**, and getting this far took several rounds of
+screenshot-and-correct. Three reasons, worth knowing before picking it up:
+
+1. The reference is a *video of a rendered mockup*, not a design file. Colour
+   and layout read fine from frames; exact spacing, radii, type sizes and the
+   precise green do not.
+2. The browser tool returns screenshots at whatever size the window happens to
+   be, often desktop width — so a phone design keeps being judged at 1568px.
+3. The mockup uses cut-out illustrations on transparent backgrounds; the shop's
+   photos are bowls on near-white. The same layout reads differently.
+
+Fastest loop found: the developer sends a screenshot from an iPhone SE viewport
+and names the single thing that looks most wrong.
+
+---
+
+## Resume here
+
+Running locally needs both:
 
 ```bash
-cd server
-npm run check-db    # Atlas connection only, no Firebase needed
-npm run dev         # API on :4000
-npm run smoke       # 25 end-to-end checks with a real Firebase ID token
-npm run seed        # dry run; --write to apply
+npm run dev                  # storefront
+cd server && npm run dev     # API on :4000 -- without it the shop is empty
 ```
 
-`npm run smoke` mints a token through the Admin SDK and exchanges it for a real
-ID token the way a browser does, rather than mocking auth — so it exercises
-token verification, the uid check, validation and the handlers together. It
-cleans up everything it creates.
+**Still to do:**
 
----
+1. **Finish the visual match** on Phase 5, screen by screen, against the
+   recording.
+2. **Cloudinary image upload.** The admin form takes an image *path* today, so
+   the client cannot add a product photographed on their phone. This is the last
+   gap stopping the panel from being genuinely self-serve.
+3. **Deploy the API to Render** plus a keep-alive cron every 14 minutes. Render
+   gets the `mongodb+srv://` string kept as a comment in `server/.env`, **not**
+   the expanded one this machine needs. Then set `VITE_API_URL` on Netlify.
+4. **Hand over to the client** — their UID into `ADMIN_UIDS`, and a short guide.
 
-## Phase 3 — Admin panel ✅
+Smaller, still outstanding:
 
-Commits: `6e073aa`, `f4faece`
-
-Lives at `/admin` **inside this app**, lazy-loaded and gated by `AdminRoute`.
-Not a separate app: the API client, auth and design tokens are shared, and two
-repos would mean every change landing twice.
-
-Built phone-first. The client runs a shop and will use this at a counter, so
-navigation is a thumb-reachable bottom bar on small screens.
-
-**The point of the whole panel is inline price editing.** The client's real
-routine is "arhar dal is 140 now" — three taps here, not open a form, find the
-field, scroll, save. Everything else is secondary.
-
-- `GET /api/me` tells the browser whether this uid is an admin (it lives in the
-  server's `ADMIN_UIDS`) and upserts the MongoDB profile.
-- `AuthContext` tracks that answer separately from Firebase's, and `AdminRoute`
-  waits on **both**. Deciding on a half-known state would bounce the client out
-  of their own panel on every refresh.
-- Delete requires typing `DELETE` and points at the hide toggle instead.
-- `/api/addresses` replaced the Firestore address collection.
-
-### The bug that made the whole exercise worth it
-
-**Editing a price silently erased the product's Hindi name, photo, description
-and tags.**
-
-Zod's `.partial()` makes keys optional but still fires their `.default()` when
-absent. A PATCH carrying only `{ variants }` parsed into an object that also
-held `nameHindi:''`, `images:[]`, `description:''` — and `findByIdAndUpdate`
-wrote every one. The first time the client corrected a price, that product lost
-its photo and Hindi name, with no error anywhere.
-
-`validate()` now takes `{ onlyProvided: true }`, used by all three PATCH routes,
-keeping only the keys the caller actually sent. Five regression checks cover it.
-
-**Found by clicking through the panel, not by reading the code.** The build was
-green and 25 tests passed. Worth remembering next time a phase "looks done".
-
----
-
-## Phase 4 — Storefront on the API ✅
-
-Commit: `6aff6f6`
-
-The shop was still serving the hardcoded catalogue, so a price the client
-changed never reached a customer.
-
-- `useProducts()` fetches the catalogue and caches it in `localStorage`.
-  Render's free tier sleeps, so a stale catalogue renders immediately and is
-  replaced when the fetch lands. The "showing saved prices" banner appears only
-  when the API is unreachable — a normal state here, not an error page.
-- **The invented 20% discount is gone.** Every product showed a saving computed
-  as `price / 0.8`. A badge now needs a real MRP.
-- Cart lines are keyed by `productId + variantId` in paise. persist `version: 2`
-  drops v1 carts — they cannot be converted without re-looking-up every product,
-  and leaving one would render ₹132 as ₹1.32.
-- Checkout posts **no prices**. Coupons are validated server-side.
-- **Firestore is gone entirely.** Firebase is Auth only; the vendor chunk went
-  from 340 kB to 106 kB.
-
----
-
-## ▶ Resume here
-
-Working locally right now: `npm run dev` (storefront, :3000) and
-`cd server && npm run dev` (API, :4000). Both are needed — without the API the
-shop renders empty.
-
-Three things left before the client can be handed anything:
-
-1. **Cloudinary image upload.** The admin form takes an image *path* today
-   (`/Products/Toor_dal.jpg`), which only works because the storefront serves
-   those files. The client cannot add a product with a photo from their phone.
-2. **Deploy the API to Render** + a keep-alive cron every 14 minutes.
-   Render gets the `mongodb+srv://` string (kept as a comment in `server/.env`),
-   **not** the expanded one this machine needs. Then set `VITE_API_URL` on
-   Netlify and redeploy the storefront.
-3. **Phase 5 — the UI rebuild.** Deliberately last: the data shape is settled
-   now, so screens built against it will not need rewriting.
-
-Also outstanding, smaller:
-
-- `src/data/products.js` is now dead except as the seed's source. Leave it —
-  the seed reads it, and it is the only record of the original prices.
+- The admin panel has no orders view. The client did not ask for one, but will
+  want it once real orders arrive.
+- Bulk price update — the most direct cure for the original "iska price bada
+  do" problem, and not built.
+- `src/data/products.js` is dead except as the seed's source. Leave it.
 - `src/utils/helpers.js` and `orderNotification.js` are largely unused now.
-- The admin panel has no orders view. The client did not ask for one, but they
-  will want it once real orders arrive.
 
 ---
 

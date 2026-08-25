@@ -33,25 +33,35 @@ npm run preview  # serve the production build
 ## Current state
 
 Phases 0-4 are done. The storefront and the admin panel at `/admin` both run off
-the Express API in `server/`, backed by MongoDB Atlas. **Firestore is gone** —
-Firebase is Auth only. Phase 5 (the mobile-first UI rebuild) is next.
+the Express API in `server/`, backed by MongoDB Atlas. **Firestore is gone** --
+Firebase is Auth only.
+
+Phase 5 (the mobile-first UI rebuild) is **in progress**: design tokens, the
+forest layout and the motion system are in place across every screen, but the
+visual match against the reference recording is not finished. See
+`docs/PROJECT_LOG.md` for what is left and why it has been slow.
 
 Running locally needs both: `npm run dev` here, and `cd server && npm run dev`.
 Without the API the shop renders empty.
 
-Money is **integer paise** everywhere server-side and across the API. Convert to
-rupees only for display, via `formatRupees` in `src/lib/api.js`.
+## Conventions that are easy to trip over
 
-`src/data/products.js` is no longer read by the app. It survives only as the
-seed script's source and as the record of the original prices — do not edit it
-expecting the shop to change.
-
-Auth has exactly one subscription, in `src/context/AuthContext.jsx`. Never call
-`onAuthStateChanged` anywhere else — several components each having their own is
-what made login unreliable in the first place. Guard customer routes with
-`ProtectedRoute` and admin routes with `AdminRoute`, and always wait on
-`loading` before deciding someone is signed out.
-
-PATCH routes must use `validate(schema.partial(), 'body', { onlyProvided: true })`.
-Without it, Zod's defaults fire for absent keys and the update wipes fields the
-caller never mentioned.
+- Money is **integer paise** everywhere server-side and across the API. Convert
+  to rupees only for display, via `formatRupees` in `src/lib/api.js`.
+- Colours come from the semantic tokens only: `surface`, `surface-raised`,
+  `surface-sunken`, `line`, `ink`, `ink-muted`, `ink-faint`, `brand`, `forest`,
+  `coral`, `cream`. No `gray-*` or `green-*` utilities remain in `src` -- do not
+  reintroduce them.
+- Animation comes from `src/lib/motion.js`. Do not hand-roll easings.
+- `src/data/products.js` is no longer read by the app. It survives only as the
+  seed script's source and as the record of the original prices -- editing it
+  will not change the shop.
+- Auth has exactly one subscription, in `src/context/AuthContext.jsx`. Never
+  call `onAuthStateChanged` anywhere else. Guard customer routes with
+  `ProtectedRoute` and admin routes with `AdminRoute`, and always wait on
+  `loading` before deciding someone is signed out.
+- PATCH routes must use
+  `validate(schema.partial(), 'body', { onlyProvided: true })`. Without it Zod's
+  defaults fire for absent keys and the update wipes fields the caller never
+  mentioned -- this silently erased product photos once already.
+- A CSS `mask` erases `box-shadow` too. Use `filter: drop-shadow` on a wrapper.
