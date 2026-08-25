@@ -32,20 +32,26 @@ npm run preview  # serve the production build
 
 ## Current state
 
-Phases 0 (foundation) and 1 (auth) are done. Phase 2 (backend + MongoDB) is
-nearly done: MongoDB is seeded with all 71 products and the API in `server/`
-serves products, categories, orders and coupons. Render deploy and Cloudinary
-uploads are what remain. `docs/PROJECT_LOG.md` has a "Resume here" section.
+Phases 0-4 are done. The storefront and the admin panel at `/admin` both run off
+the Express API in `server/`, backed by MongoDB Atlas. **Firestore is gone** —
+Firebase is Auth only. Phase 5 (the mobile-first UI rebuild) is next.
 
-The **storefront** still reads `src/data/products.js` and writes orders to
-Firestore — rewiring it to the API is Phase 4. The API is already the source of
-truth; treat the hardcoded file as a frozen snapshot, not something to edit.
+Running locally needs both: `npm run dev` here, and `cd server && npm run dev`.
+Without the API the shop renders empty.
 
 Money is **integer paise** everywhere server-side and across the API. Convert to
-rupees only for display.
+rupees only for display, via `formatRupees` in `src/lib/api.js`.
+
+`src/data/products.js` is no longer read by the app. It survives only as the
+seed script's source and as the record of the original prices — do not edit it
+expecting the shop to change.
 
 Auth has exactly one subscription, in `src/context/AuthContext.jsx`. Never call
 `onAuthStateChanged` anywhere else — several components each having their own is
-what made login unreliable in the first place. Guard routes with
-`ProtectedRoute`, and always wait on `loading` before deciding someone is signed
-out.
+what made login unreliable in the first place. Guard customer routes with
+`ProtectedRoute` and admin routes with `AdminRoute`, and always wait on
+`loading` before deciding someone is signed out.
+
+PATCH routes must use `validate(schema.partial(), 'body', { onlyProvided: true })`.
+Without it, Zod's defaults fire for absent keys and the update wipes fields the
+caller never mentioned.

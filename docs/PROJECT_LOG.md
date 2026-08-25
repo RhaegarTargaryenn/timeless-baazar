@@ -47,10 +47,10 @@ without calling anyone.**
 
 - [x] **Phase 0 — Foundation** ✅ done 2026-08-25
 - [x] **Phase 1 — Auth fix** ✅ done 2026-08-25
-- [ ] **Phase 2 — Backend + MongoDB** ← in progress, PAUSED HERE
-- [ ] **Phase 3 — Admin panel** ← *this is the phase that solves the real problem*
-- [ ] **Phase 4 — Storefront rewired to the API**
-- [ ] **Phase 5 — UI rebuild, mobile-first**
+- [x] **Phase 2 — Backend + MongoDB** ✅ (Render deploy still pending)
+- [x] **Phase 3 — Admin panel** ✅ (image upload still pending)
+- [x] **Phase 4 — Storefront rewired to the API** ✅
+- [ ] **Phase 5 — UI rebuild, mobile-first** ← next
 - [ ] **Phase 6 — Handoff to client**
 
 ---
@@ -295,19 +295,97 @@ ID token the way a browser does, rather than mocking auth — so it exercises
 token verification, the uid check, validation and the handlers together. It
 cleans up everything it creates.
 
-### ▶ Resume here
+---
 
-Phase 2 has two pieces left:
+## Phase 3 — Admin panel ✅
 
-1. **Deploy the API to Render** + a keep-alive cron. Note that Render must get
-   the `mongodb+srv://` connection string (kept as a comment in `server/.env`),
-   **not** the expanded one this machine needs.
-2. **Cloudinary** for product images. They are still local paths like
-   `/Products/Toor_dal.jpg`, which works only because the storefront serves
-   them. The admin panel needs real uploads.
+Commits: `6e073aa`, `f4faece`
 
-Then Phase 3 — the admin panel — which is the phase that actually solves the
-client's problem.
+Lives at `/admin` **inside this app**, lazy-loaded and gated by `AdminRoute`.
+Not a separate app: the API client, auth and design tokens are shared, and two
+repos would mean every change landing twice.
+
+Built phone-first. The client runs a shop and will use this at a counter, so
+navigation is a thumb-reachable bottom bar on small screens.
+
+**The point of the whole panel is inline price editing.** The client's real
+routine is "arhar dal is 140 now" — three taps here, not open a form, find the
+field, scroll, save. Everything else is secondary.
+
+- `GET /api/me` tells the browser whether this uid is an admin (it lives in the
+  server's `ADMIN_UIDS`) and upserts the MongoDB profile.
+- `AuthContext` tracks that answer separately from Firebase's, and `AdminRoute`
+  waits on **both**. Deciding on a half-known state would bounce the client out
+  of their own panel on every refresh.
+- Delete requires typing `DELETE` and points at the hide toggle instead.
+- `/api/addresses` replaced the Firestore address collection.
+
+### The bug that made the whole exercise worth it
+
+**Editing a price silently erased the product's Hindi name, photo, description
+and tags.**
+
+Zod's `.partial()` makes keys optional but still fires their `.default()` when
+absent. A PATCH carrying only `{ variants }` parsed into an object that also
+held `nameHindi:''`, `images:[]`, `description:''` — and `findByIdAndUpdate`
+wrote every one. The first time the client corrected a price, that product lost
+its photo and Hindi name, with no error anywhere.
+
+`validate()` now takes `{ onlyProvided: true }`, used by all three PATCH routes,
+keeping only the keys the caller actually sent. Five regression checks cover it.
+
+**Found by clicking through the panel, not by reading the code.** The build was
+green and 25 tests passed. Worth remembering next time a phase "looks done".
+
+---
+
+## Phase 4 — Storefront on the API ✅
+
+Commit: `6aff6f6`
+
+The shop was still serving the hardcoded catalogue, so a price the client
+changed never reached a customer.
+
+- `useProducts()` fetches the catalogue and caches it in `localStorage`.
+  Render's free tier sleeps, so a stale catalogue renders immediately and is
+  replaced when the fetch lands. The "showing saved prices" banner appears only
+  when the API is unreachable — a normal state here, not an error page.
+- **The invented 20% discount is gone.** Every product showed a saving computed
+  as `price / 0.8`. A badge now needs a real MRP.
+- Cart lines are keyed by `productId + variantId` in paise. persist `version: 2`
+  drops v1 carts — they cannot be converted without re-looking-up every product,
+  and leaving one would render ₹132 as ₹1.32.
+- Checkout posts **no prices**. Coupons are validated server-side.
+- **Firestore is gone entirely.** Firebase is Auth only; the vendor chunk went
+  from 340 kB to 106 kB.
+
+---
+
+## ▶ Resume here
+
+Working locally right now: `npm run dev` (storefront, :3000) and
+`cd server && npm run dev` (API, :4000). Both are needed — without the API the
+shop renders empty.
+
+Three things left before the client can be handed anything:
+
+1. **Cloudinary image upload.** The admin form takes an image *path* today
+   (`/Products/Toor_dal.jpg`), which only works because the storefront serves
+   those files. The client cannot add a product with a photo from their phone.
+2. **Deploy the API to Render** + a keep-alive cron every 14 minutes.
+   Render gets the `mongodb+srv://` string (kept as a comment in `server/.env`),
+   **not** the expanded one this machine needs. Then set `VITE_API_URL` on
+   Netlify and redeploy the storefront.
+3. **Phase 5 — the UI rebuild.** Deliberately last: the data shape is settled
+   now, so screens built against it will not need rewriting.
+
+Also outstanding, smaller:
+
+- `src/data/products.js` is now dead except as the seed's source. Leave it —
+  the seed reads it, and it is the only record of the original prices.
+- `src/utils/helpers.js` and `orderNotification.js` are largely unused now.
+- The admin panel has no orders view. The client did not ask for one, but they
+  will want it once real orders arrive.
 
 ---
 
