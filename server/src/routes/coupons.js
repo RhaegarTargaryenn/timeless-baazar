@@ -106,7 +106,7 @@ router.post(
 router.patch(
   '/:id',
   requireAdmin,
-  validate(couponBody.partial()),
+  validate(couponBody.partial(), 'body', { onlyProvided: true }),
   asyncHandler(async (req, res) => {
     if (req.body.type || req.body.value) {
       const current = await Coupon.findById(req.params.id).lean();

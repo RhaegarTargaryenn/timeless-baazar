@@ -58,7 +58,7 @@ router.post(
 router.patch(
   '/:id',
   requireAdmin,
-  validate(categoryBody.partial()),
+  validate(categoryBody.partial(), 'body', { onlyProvided: true }),
   asyncHandler(async (req, res) => {
     const category = await Category.findByIdAndUpdate(req.params.id, req.body, {
       new: true,

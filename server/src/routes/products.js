@@ -159,7 +159,7 @@ router.post(
 router.patch(
   '/:id',
   requireAdmin,
-  validate(productBody.partial()),
+  validate(productBody.partial(), 'body', { onlyProvided: true }),
   asyncHandler(async (req, res) => {
     if (req.body.variants) checkMrp(req.body.variants);
 

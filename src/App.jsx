@@ -31,39 +31,58 @@ const PageLoader = () => (
   </div>
 );
 
+/**
+ * Storefront chrome: the customer header and the install prompt.
+ *
+ * The admin panel deliberately renders outside this. It has its own header, and
+ * stacking the customer one on top wastes the vertical space the client needs
+ * on a phone.
+ */
+const StorefrontShell = ({ children }) => (
+  <div className="flex flex-col min-h-screen">
+    <Header />
+    <main className="flex-grow">{children}</main>
+    <PWAInstallPrompt />
+  </div>
+);
+
+const StorefrontRoutes = () => (
+  <StorefrontShell>
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/products" element={<Products />} />
+      <Route path="/cart" element={<Cart />} />
+      <Route
+        path="/checkout"
+        element={
+          <ProtectedRoute>
+            <Checkout />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/track-order"
+        element={
+          <ProtectedRoute>
+            <OrderTracking />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+    </Routes>
+  </StorefrontShell>
+);
+
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-      <Router>
-        <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-          <Header />
-          
-          <main className="flex-grow">
+        <Router>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route
-                  path="/checkout"
-                  element={
-                    <ProtectedRoute>
-                      <Checkout />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/track-order"
-                  element={
-                    <ProtectedRoute>
-                      <OrderTracking />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-
+                {/* Admin: its own chrome */}
                 <Route
                   path="/admin"
                   element={
@@ -77,28 +96,26 @@ function App() {
                   <Route path="products/:id" element={<AdminProductForm />} />
                   <Route path="coupons" element={<AdminCoupons />} />
                 </Route>
+
+                {/* Everything else */}
+                <Route path="*" element={<StorefrontRoutes />} />
               </Routes>
             </Suspense>
-          </main>
 
-          {/* PWA Install Prompt */}
-          <PWAInstallPrompt />
-
-          {/* Toast Notifications */}
-          <Toaster
-            position="bottom-center"
-            toastOptions={{
-              duration: 2000,
-              className: 'dark:bg-gray-800 dark:text-white',
-              style: {
-                background: '#DBEAFE',
-                color: '#1E3A8A',
-                border: '1px solid #93C5FD',
-              },
-            }}
-          />
-        </div>
-      </Router>
+            <Toaster
+              position="bottom-center"
+              toastOptions={{
+                duration: 2000,
+                className: 'dark:bg-gray-800 dark:text-white',
+                style: {
+                  background: '#DBEAFE',
+                  color: '#1E3A8A',
+                  border: '1px solid #93C5FD',
+                },
+              }}
+            />
+          </div>
+        </Router>
       </AuthProvider>
     </ThemeProvider>
   );

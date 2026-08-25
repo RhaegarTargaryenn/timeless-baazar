@@ -159,6 +159,52 @@ const run = async () => {
   });
   check('visibility toggle works', toggled.body.product?.isActive === false);
 
+  /**
+   * Regression: a PATCH must not wipe fields it did not mention.
+   *
+   * Zod's .partial() makes keys optional but still fires their .default() when
+   * absent, so a PATCH of only { variants } used to parse into an object also
+   * carrying nameHindi:'', images:[], description:'' — and findByIdAndUpdate
+   * wrote all of them. Editing a price silently erased the product's Hindi
+   * name and photo. Caught by using the panel, not by reading the code.
+   */
+  console.log('\nPATCH does not wipe untouched fields');
+  const rich = await api('/products', {
+    token,
+    method: 'POST',
+    body: {
+      slug: 'smoke-patch-target',
+      name: 'Patch Target',
+      nameHindi: 'पैच लक्ष्य',
+      description: 'Should survive a price edit',
+      category: adminList.body.products[0].category._id,
+      images: ['/Products/Toor_dal.jpg'],
+      tags: ['bestseller'],
+      variants: [{ label: '1 kg', price: 5000, isActive: true }],
+    },
+  });
+  const richId = rich.body.product?._id;
+
+  const afterPatch = await api(`/products/${richId}`, {
+    token,
+    method: 'PATCH',
+    body: {
+      variants: [
+        { _id: rich.body.product.variants[0]._id, label: '1 kg', price: 6000, mrp: null, isActive: true },
+      ],
+    },
+  });
+
+  check('price actually changed', afterPatch.body.product?.variants[0]?.price === 6000);
+  check('nameHindi survived', afterPatch.body.product?.nameHindi === 'पैच लक्ष्य',
+    JSON.stringify(afterPatch.body.product?.nameHindi));
+  check('images survived', afterPatch.body.product?.images?.length === 1,
+    JSON.stringify(afterPatch.body.product?.images));
+  check('description survived', afterPatch.body.product?.description === 'Should survive a price edit');
+  check('tags survived', afterPatch.body.product?.tags?.length === 1);
+
+  await api(`/products/${richId}`, { token, method: 'DELETE' });
+
   // ── Category delete guard ────────────────────────────────────────────────
   console.log('\nCategory guard');
   const catInUse = adminList.body.products[0].category._id;
