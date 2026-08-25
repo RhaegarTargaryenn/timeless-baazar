@@ -1,11 +1,24 @@
 /** @type {import('tailwindcss').Config} */
+
+/**
+ * One set of tokens for the whole app.
+ *
+ * Before this there were two half-systems: a green palette in the config and an
+ * orange one left over in several components, plus `shadow-soft*` defined here
+ * and `shadow-smooth*` defined again in index.css. Anything referencing the
+ * orange scale rendered as a different product.
+ *
+ * Colours are CSS variables so light and dark are one definition, not two sets
+ * of `dark:` classes on every element.
+ */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        primary: {
+        // Brand green. 600 is the action colour; 500 is for gradients.
+        brand: {
           50: '#F0FDF4',
           100: '#DCFCE7',
           200: '#BBF7D0',
@@ -17,85 +30,75 @@ export default {
           800: '#166534',
           900: '#14532D',
         },
-        accent: {
-          50: '#ECFDF5',
-          100: '#D1FAE5',
-          200: '#A7F3D0',
-          300: '#6EE7B7',
-          400: '#34D399',
-          500: '#10B981',
-          600: '#059669',
-          700: '#047857',
-          800: '#065F46',
-          900: '#064E3B',
+
+        /**
+         * The dark forest green the header and the floating nav are painted in.
+         * It is the app's signature -- the white content sits on it like a
+         * sheet, with a curved seam between the two.
+         */
+        forest: {
+          DEFAULT: '#0D3B2C',
+          light: '#14513C',
+          dark: '#08291E',
         },
+
+        /** "See more" links and sale flashes. Warm, so it reads as a nudge. */
+        coral: '#E5484D',
+
+        /** Category bubbles. */
+        cream: '#F6E7C8',
+
+        // Semantic surfaces, driven by CSS variables in index.css.
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        'surface-raised': 'rgb(var(--surface-raised) / <alpha-value>)',
+        'surface-sunken': 'rgb(var(--surface-sunken) / <alpha-value>)',
+        line: 'rgb(var(--line) / <alpha-value>)',
+        ink: 'rgb(var(--ink) / <alpha-value>)',
+        'ink-muted': 'rgb(var(--ink-muted) / <alpha-value>)',
+        'ink-faint': 'rgb(var(--ink-faint) / <alpha-value>)',
       },
+
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
-        display: ['Inter', 'system-ui', 'sans-serif'],
       },
-      spacing: {
-        '18': '4.5rem',
-        '88': '22rem',
-        '128': '32rem',
+
+      // A grocery app reads as friendly through roundness more than colour.
+      borderRadius: {
+        card: '1.25rem',
+        sheet: '1.75rem',
+        // The seam where white content meets the forest header.
+        seam: '2rem',
       },
-      backdropBlur: {
-        xs: '2px',
-        sm: '4px',
-        md: '12px',
-        lg: '16px',
-        xl: '24px',
-      },
+
       boxShadow: {
-        'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
-        'soft-lg': '0 10px 40px -10px rgba(0, 0, 0, 0.1)',
-        'glow': '0 0 20px rgba(255, 152, 0, 0.3)',
-        'glow-lg': '0 0 40px rgba(255, 152, 0, 0.4)',
+        card: '0 1px 2px rgb(16 24 40 / 0.04), 0 4px 12px -4px rgb(16 24 40 / 0.06)',
+        lift: '0 4px 8px -2px rgb(16 24 40 / 0.06), 0 12px 28px -8px rgb(16 24 40 / 0.10)',
+        sheet: '0 -8px 40px -12px rgb(16 24 40 / 0.22)',
+        // Buttons carry a tinted shadow so the primary action reads as raised
+        // rather than merely coloured.
+        brand: '0 4px 14px -4px rgb(22 163 74 / 0.45)',
+        // The floating nav pill needs to read as hovering over the page.
+        float: '0 8px 30px -6px rgb(13 59 44 / 0.35)',
       },
-      animation: {
-        'bounce-slow': 'bounce 2s infinite',
-        'fade-in': 'fadeIn 0.5s ease-in',
-        'slide-up': 'slideUp 0.5s ease-out',
-        'slide-down': 'slideDown 0.3s ease-out',
-        'scale-in': 'scaleIn 0.2s ease-out',
-        'float': 'float 3s ease-in-out infinite',
-        'glow': 'glow 2s ease-in-out infinite',
-        'gradient': 'gradient 3s ease infinite',
-        'shimmer': 'shimmer 2.5s infinite',
+
+      // Bottom nav and sheets have to clear the iOS home indicator.
+      spacing: {
+        'safe-b': 'env(safe-area-inset-bottom)',
+        nav: '4.5rem',
       },
+
       keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideUp: {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        slideDown: {
-          '0%': { transform: 'translateY(-10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        scaleIn: {
-          '0%': { transform: 'scale(0.95)', opacity: '0' },
-          '100%': { transform: 'scale(1)', opacity: '1' },
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-10px)' },
-        },
-        glow: {
-          '0%, 100%': { boxShadow: '0 0 15px rgba(255, 152, 0, 0.4)' },
-          '50%': { boxShadow: '0 0 30px rgba(255, 152, 0, 0.6)' },
-        },
-        gradient: {
-          '0%, 100%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
+        'sheet-up': {
+          from: { transform: 'translateY(100%)' },
+          to: { transform: 'translateY(0)' },
         },
         shimmer: {
-          '0%': { backgroundPosition: '-1000px 0' },
-          '100%': { backgroundPosition: '1000px 0' },
+          '100%': { transform: 'translateX(100%)' },
         },
+      },
+      animation: {
+        'sheet-up': 'sheet-up 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
+        shimmer: 'shimmer 1.6s infinite',
       },
     },
   },

@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import Header from './components/Header';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import BottomNav from './components/BottomNav';
 import './App.css';
 
 const Home = lazy(() => import('./pages/Home'));
@@ -26,8 +27,8 @@ const AdminProductForm = lazy(() => import('./pages/admin/AdminProductForm'));
 const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'));
 
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-    <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+  <div className="min-h-screen flex items-center justify-center bg-surface-sunken">
+    <div className="w-8 h-8 border-[3px] border-brand-500 border-t-transparent rounded-full animate-spin" />
   </div>
 );
 
@@ -38,13 +39,26 @@ const PageLoader = () => (
  * stacking the customer one on top wastes the vertical space the client needs
  * on a phone.
  */
-const StorefrontShell = ({ children }) => (
-  <div className="flex flex-col min-h-screen">
-    <Header />
-    <main className="flex-grow">{children}</main>
-    <PWAInstallPrompt />
-  </div>
-);
+/**
+ * Home and the shop paint their own dark header, so the shared light one would
+ * stack a second bar on top of it. Everything else still needs it.
+ */
+const OWN_HEADER = ['/', '/products'];
+
+const StorefrontShell = ({ children }) => {
+  const { pathname } = useLocation();
+  const ownHeader = OWN_HEADER.includes(pathname);
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      {!ownHeader && <Header />}
+      {/* pb keeps the last row clear of the floating nav on phones */}
+      <main className={ownHeader ? 'flex-grow' : 'flex-grow pb-28 sm:pb-0'}>{children}</main>
+      <BottomNav />
+      <PWAInstallPrompt />
+    </div>
+  );
+};
 
 const StorefrontRoutes = () => (
   <StorefrontShell>
@@ -79,7 +93,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <Router>
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+          <div className="min-h-screen bg-surface-sunken transition-colors">
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Admin: its own chrome */}
@@ -102,15 +116,23 @@ function App() {
               </Routes>
             </Suspense>
 
+            {/*
+              Sits above the bottom nav on phones. The old toast was hardcoded
+              blue on a green app.
+            */}
             <Toaster
               position="bottom-center"
+              containerStyle={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 12px)' }}
               toastOptions={{
-                duration: 2000,
-                className: 'dark:bg-gray-800 dark:text-white',
+                duration: 2200,
                 style: {
-                  background: '#DBEAFE',
-                  color: '#1E3A8A',
-                  border: '1px solid #93C5FD',
+                  background: 'rgb(17 24 32)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  borderRadius: '14px',
+                  padding: '10px 14px',
+                  maxWidth: '88vw',
                 },
               }}
             />

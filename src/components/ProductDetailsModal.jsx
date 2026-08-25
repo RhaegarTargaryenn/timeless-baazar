@@ -1,258 +1,288 @@
-import React, { useState, memo } from 'react';
-import { X, ShoppingCart, Plus, Minus, Heart, Star } from 'lucide-react';
+import React, { useState, useEffect, memo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X, Minus, Plus, ShoppingCart, Zap, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
+
 import useCartStore from '../store/cartStore';
-import { formatRupees } from '../lib/api';
+import { Price } from './ProductCard';
+import { sheetMotion, spring, tap, fade } from '../lib/motion';
+import { cx } from './ui';
 
-const CATEGORY_EMOJI = { daal: '🥘', rice: '🍚', flour: '🌾', spices: '🌶️', snacks: '🍿', grocery: '🛍️' };
+const CATEGORY_EMOJI = {
+  daal: '🥘',
+  rice: '🍚',
+  flour: '🌾',
+  spices: '🌶️',
+  snacks: '🍿',
+  grocery: '🛍️',
+};
 
+/**
+ * Product details, as a bottom sheet.
+ *
+ * A sheet rather than a route so the grid stays behind it — after adding, the
+ * customer is back where they were instead of navigating twice. Rendered
+ * through a portal so it escapes the card's stacking context.
+ */
 const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
   const variants = product?.variants ?? [];
-
-  // Defaults to the last variant -- the larger pack, which is what most people
-  // buy. The API has already removed anything the shop marked out of stock.
-  const [selectedVariantId, setSelectedVariantId] = useState(null);
+  const [variantId, setVariantId] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const addItem = useCartStore(state => state.addItem);
 
-  const selectedVariant =
-    variants.find((v) => v._id === selectedVariantId) ?? variants[variants.length - 1] ?? null;
+  const addItem = useCartStore((state) => state.addItem);
 
-  const canPurchase = Boolean(selectedVariant);
+  const variant =
+    variants.find((v) => v._id === variantId) ?? variants[variants.length - 1] ?? null;
 
-  // A badge only when the shop entered a real list price. This used to be
-  // price / 0.8 with a hardcoded "20%" on every single product.
-  const hasDiscount = selectedVariant?.mrp != null && selectedVariant.mrp > selectedVariant.price;
+  // Reset on open so reopening never shows the previous session's state.
+  useEffect(() => {
+    if (isOpen) {
+      setQuantity(1);
+      setVariantId(null);
+    }
+  }, [isOpen]);
+
+  // A sheet over a page that also scrolls is disorienting.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKey = (event) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isOpen, onClose]);
+
+  const canBuy = Boolean(variant);
+  const hasDiscount = variant?.mrp != null && variant.mrp > variant.price;
   const discountPercent = hasDiscount
-    ? Math.round(((selectedVariant.mrp - selectedVariant.price) / selectedVariant.mrp) * 100)
+    ? Math.round(((variant.mrp - variant.price) / variant.mrp) * 100)
     : 0;
 
-  const handleAddToCart = () => {
-    if (!canPurchase) {
-      toast.error('This item is not available right now');
-      return;
-    }
-
-    addItem(product, selectedVariant, quantity);
-    toast.success(`${product.name} added to cart!`, {
-      icon: '🛒',
-      duration: 1500,
-      style: {
-        background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)',
-        color: '#166534',
-        border: '2px solid #22C55E',
-        borderRadius: '20px',
-        padding: '16px',
-        fontSize: '14px',
-        fontWeight: '600',
-        boxShadow: '0 10px 40px -10px rgba(34, 197, 94, 0.4)',
-      },
-    });
+  const handleAdd = () => {
+    if (!canBuy) return;
+    addItem(product, variant, quantity);
+    toast.success(`${quantity} × ${product.name} added`);
     onClose();
   };
 
-  if (!product) return null;
-
-  return (
+  return createPortal(
     <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
+      {isOpen && product && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            {...fade}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+            aria-hidden
           />
 
-          {/* Bottom Sheet Modal */}
           <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 rounded-t-[32px] shadow-2xl max-h-[95vh] overflow-hidden"
+            {...sheetMotion}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.4 }}
+            // Dragging the sheet down past a threshold, or flicking it, closes
+            // it — the gesture people already expect from a sheet.
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 120 || info.velocity.y > 600) onClose();
+            }}
+            className="relative w-full sm:max-w-md bg-forest rounded-t-sheet sm:rounded-sheet overflow-hidden max-h-[94vh] flex flex-col"
           >
-            {/* Handle Bar */}
-            <div className="flex justify-center py-3">
-              <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
-            </div>
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 pb-4 border-b border-gray-100 dark:border-gray-700">
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-              >
-                <X className="w-6 h-6 text-gray-700 dark:text-gray-300" />
-              </button>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Product Details</h2>
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-                <ShoppingCart className="w-6 h-6 text-gray-700 dark:text-gray-300" />
-              </button>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="overflow-y-auto max-h-[calc(95vh-140px)] px-6 pb-6">
-              {/* Product Image */}
-              <div className="relative w-full h-44 sm:h-56 max-w-sm mx-auto my-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600 rounded-3xl overflow-hidden">
-                {product.image ? (
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-contain"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-8xl">
-                    {CATEGORY_EMOJI[product.category?.slug] ?? '🛍️'}
-                  </div>
-                )}
+            {/* Forest strip, matching the page header */}
+            <div className="shrink-0 px-4 pt-3 pb-4">
+              <div className="sm:hidden flex justify-center mb-3">
+                <div className="w-10 h-1 rounded-full bg-white/25" />
               </div>
 
-              {/* Product Info */}
-              <div className="space-y-4">
-                {/* Name and Favorite */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                      {product.name}{selectedVariant ? ` · ${selectedVariant.label}` : ''}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{product.nameHindi}</p>
-                  </div>
-                  <button
-                    onClick={() => setIsFavorite(!isFavorite)}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                  >
-                    <Heart
-                      className={`w-6 h-6 ${
-                        isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'
-                      }`}
+              <div className="flex items-center gap-3">
+                <motion.button
+                  whileTap={tap}
+                  onClick={onClose}
+                  aria-label="Close"
+                  className="shrink-0 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white"
+                >
+                  <X className="w-5 h-5" />
+                </motion.button>
+                <h2 className="flex-1 text-center text-base font-bold text-white">
+                  Product Details
+                </h2>
+                <span className="w-10 shrink-0" />
+              </div>
+            </div>
+
+            {/* White sheet cutting into the green */}
+            <div className="flex-1 min-h-0 -mt-1 rounded-t-seam bg-surface flex flex-col">
+              <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4">
+                <div className="w-full aspect-[4/3] rounded-card bg-surface-sunken overflow-hidden mb-4">
+                  {product.images?.[0] ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
                     />
-                  </button>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-7xl opacity-25">
+                      {CATEGORY_EMOJI[product.category?.slug] ?? '🛒'}
+                    </div>
+                  )}
                 </div>
 
-                {/* Availability */}
-                {canPurchase && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-                      Available on fast delivery
-                    </span>
-                  </div>
+                <h3 className="text-xl font-extrabold text-ink leading-tight">
+                  {product.name}
+                </h3>
+                {product.nameHindi && (
+                  <p className="text-sm text-ink-muted mt-0.5">{product.nameHindi}</p>
                 )}
+                <p className="text-xs text-ink-faint mt-1">{variant?.label}</p>
 
-                {/* Price and Rating */}
-                <div className="flex items-center gap-4">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-extrabold text-gray-900 dark:text-white">
-                      {canPurchase ? formatRupees(selectedVariant.price) : 'Soon'}
-                    </span>
+                <div className="flex items-center justify-between gap-3 mt-3">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    {canBuy ? (
+                      <Price paise={variant.price} className="text-2xl" />
+                    ) : (
+                      <span className="text-2xl font-extrabold text-ink-faint">—</span>
+                    )}
                     {hasDiscount && (
                       <>
-                        <span className="text-lg text-gray-400 line-through">
-                          {formatRupees(selectedVariant.mrp)}
+                        <span className="text-sm text-ink-faint line-through tabular">
+                          ₹{Math.round(variant.mrp / 100)}
                         </span>
-                        <span className="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full">
-                          {discountPercent}%
+                        <span className="px-2 py-0.5 rounded-full bg-coral text-white text-[11px] font-bold">
+                          {discountPercent}% off
                         </span>
                       </>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 ml-auto">
-                    <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      4.5 Rating
+
+                  {canBuy && (
+                    <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 dark:text-brand-400">
+                      <Zap className="w-3.5 h-3.5 fill-current" />
+                      Fast delivery
                     </span>
-                  </div>
+                  )}
                 </div>
 
-                {/* Size Selection */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Select Size
-                  </label>
-                  <div className="flex gap-3">
-                    {variants.map((variant) => (
-                      <button
-                        key={variant._id}
-                        onClick={() => setSelectedVariantId(variant._id)}
-                        className={`flex-1 py-3 px-4 rounded-2xl font-semibold transition-all ${
-                          selectedVariant?._id === variant._id
-                            ? 'bg-green-600 text-white shadow-smooth'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        {variant.label}
-                      </button>
-                    ))}
+                {variants.length > 1 && (
+                  <div className="mt-5">
+                    <p className="text-xs font-semibold text-ink-muted mb-2">Choose size</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {variants.map((option) => {
+                        const active = variant?._id === option._id;
+                        return (
+                          <motion.button
+                            key={option._id}
+                            whileTap={tap}
+                            onClick={() => setVariantId(option._id)}
+                            className={cx(
+                              'relative px-4 h-11 rounded-2xl text-sm font-semibold border transition-colors',
+                              active
+                                ? 'border-brand-600 text-white'
+                                : 'bg-surface-raised border-line text-ink-muted'
+                            )}
+                          >
+                            {active && (
+                              <motion.span
+                                layoutId={`size-${product._id}`}
+                                transition={spring.layout}
+                                className="absolute inset-0 rounded-2xl bg-brand-600"
+                              />
+                            )}
+                            <span className="relative">
+                              {option.label}
+                              <span className="ml-2 text-xs opacity-80 tabular">
+                                ₹{Math.round(option.price / 100)}
+                              </span>
+                            </span>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Quantity Selector */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Quantity
-                  </label>
-                  <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-2xl p-2 max-w-xs">
-                    <button
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={!canPurchase || quantity <= 1}
-                      className="p-3 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-40"
-                    >
-                      <Minus className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                    </button>
-                    <span className="flex-1 text-center text-xl font-bold text-gray-900 dark:text-white">
-                      {quantity}
-                    </span>
-                    <button
-                      onClick={() => setQuantity(quantity + 1)}
-                      disabled={!canPurchase}
-                      className="p-3 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-40"
-                    >
-                      <Plus className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                    </button>
+                {product.description && (
+                  <div className="mt-5">
+                    <p className="text-xs font-semibold text-ink-muted mb-1">About</p>
+                    <p className="text-sm text-ink-muted leading-relaxed">
+                      {product.description}
+                    </p>
                   </div>
-                </div>
+                )}
 
-                {/* Description */}
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                    Description
-                  </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {product.description ||
-                      `${product.name} from Timeless Baazar, sourced and packed with care.`}
-                  </p>
+                <div className="flex items-center gap-1.5 mt-5 text-xs text-ink-faint">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  Packed fresh by the shop on the day it ships
                 </div>
               </div>
-            </div>
 
-            {/* Fixed Bottom Button */}
-            <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-6 py-4">
-              <motion.button
-                whileHover={{ scale: canPurchase ? 1.02 : 1 }}
-                whileTap={{ scale: canPurchase ? 0.98 : 1 }}
-                onClick={handleAddToCart}
-                disabled={!canPurchase}
-                className={`w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all ${
-                  canPurchase
-                    ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-smooth'
-                    : 'bg-gray-400 cursor-not-allowed'
-                }`}
+              {/* Action bar stays put while the content above scrolls */}
+              <div
+                className="shrink-0 border-t border-line bg-surface px-5 pt-3 flex items-center gap-3"
+                style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
               >
-                <ShoppingCart className="w-5 h-5" />
-                {canPurchase ? 'Add To Cart' : 'Coming Soon'}
-              </motion.button>
+                <div className="shrink-0 inline-flex items-center gap-1 bg-surface-sunken rounded-full p-1">
+                  <motion.button
+                    whileTap={tap}
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    aria-label="Reduce quantity"
+                    className="w-9 h-9 rounded-full bg-surface-raised border border-line flex items-center justify-center text-ink disabled:opacity-40"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </motion.button>
+                  <motion.span
+                    key={quantity}
+                    initial={{ y: -6, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={spring.snappy}
+                    className="w-8 text-center text-base font-bold text-ink tabular"
+                  >
+                    {quantity}
+                  </motion.span>
+                  <motion.button
+                    whileTap={tap}
+                    onClick={() => setQuantity((q) => Math.min(99, q + 1))}
+                    aria-label="Increase quantity"
+                    className="w-9 h-9 rounded-full bg-surface-raised border border-line flex items-center justify-center text-ink"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </motion.button>
+                </div>
+
+                <motion.button
+                  whileTap={canBuy ? tap : undefined}
+                  onClick={handleAdd}
+                  disabled={!canBuy}
+                  className="flex-1 h-12 rounded-full bg-brand-600 text-white font-bold text-sm shadow-brand flex items-center justify-center gap-2 disabled:bg-surface-sunken disabled:text-ink-faint disabled:shadow-none"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  {canBuy ? (
+                    <>
+                      Add to cart
+                      <span className="opacity-70">·</span>
+                      <span className="tabular">₹{Math.round((variant.price * quantity) / 100)}</span>
+                    </>
+                  ) : (
+                    'Not available'
+                  )}
+                </motion.button>
+              </div>
             </div>
           </motion.div>
-        </>
+        </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 });
+
+ProductDetailsModal.displayName = 'ProductDetailsModal';
 
 export default ProductDetailsModal;
