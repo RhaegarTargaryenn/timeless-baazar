@@ -104,7 +104,7 @@ const Signup = () => {
     emailForm.confirmPassword && emailForm.password !== emailForm.confirmPassword;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center py-10 px-4">
+    <div className="min-h-screen bg-forest flex items-center justify-center py-10 px-4">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
@@ -117,42 +117,42 @@ const Signup = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.15 }}
-            className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-lg mx-auto mb-3"
+            className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center text-white text-xl font-extrabold shadow-brand mx-auto mb-4"
           >
             TB
           </motion.div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Create Account</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <h1 className="text-2xl font-extrabold text-white">Create Account</h1>
+          <p className="text-sm text-white/55 mt-1">
             Join Timeless Baazar today
           </p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
+        <div className="bg-surface rounded-sheet shadow-lift">
           <div className="p-6 space-y-4">
             <motion.button
               onClick={handleGoogleSignIn}
               disabled={loading}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
-              className="w-full py-3.5 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl flex items-center justify-center gap-3 hover:border-green-400 dark:hover:border-green-600 hover:shadow-md transition-all text-sm font-semibold text-gray-800 dark:text-gray-100 disabled:opacity-50"
+              className="w-full h-14 bg-surface-sunken border-2 border-line rounded-2xl flex items-center justify-center gap-3 hover:border-brand-400 transition-colors text-sm font-bold text-ink disabled:opacity-50"
             >
               <FcGoogle className="w-5 h-5" /> Continue with Google
             </motion.button>
 
-            <p className="text-center text-xs text-gray-400">
+            <p className="text-center text-xs text-ink-faint">
               One tap — nothing to verify, nothing to remember
             </p>
 
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-gray-100 dark:bg-gray-700" />
-              <span className="text-xs text-gray-400">OR</span>
-              <div className="flex-1 h-px bg-gray-100 dark:bg-gray-700" />
+              <div className="flex-1 h-px bg-line" />
+              <span className="text-xs text-ink-faint">OR</span>
+              <div className="flex-1 h-px bg-line" />
             </div>
 
             {!showEmailForm ? (
               <button
                 onClick={() => setShowEmailForm(true)}
-                className="w-full py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                className="w-full py-3 text-sm font-semibold text-ink-muted hover:text-brand-600 transition-colors"
               >
                 Sign up with email instead
               </button>
@@ -177,11 +177,11 @@ const Signup = () => {
                   },
                 ].map(({ label, name, type, icon, placeholder, autocomplete }) => (
                   <div key={name}>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                    <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                       {label}
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint">
                         {icon}
                       </span>
                       <input
@@ -190,7 +190,7 @@ const Signup = () => {
                         onChange={(e) => setEmailForm({ ...emailForm, [name]: e.target.value })}
                         required
                         autoComplete={autocomplete}
-                        className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800/50 outline-none transition-all"
+                        className="w-full h-12 pl-10 pr-3 text-sm rounded-2xl bg-surface-sunken border border-line text-ink placeholder:text-ink-faint focus:border-brand-500 focus:ring-2 focus:ring-brand-500/25 outline-none transition-all"
                         placeholder={placeholder}
                       />
                     </div>
@@ -199,11 +199,11 @@ const Signup = () => {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                     Password
                   </label>
                   <div className="relative">
-                    <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <HiLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint w-4 h-4" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={emailForm.password}
@@ -211,13 +211,13 @@ const Signup = () => {
                       required
                       minLength={6}
                       autoComplete="new-password"
-                      className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all"
+                      className="w-full h-12 pl-10 pr-10 text-sm rounded-2xl bg-surface-sunken border border-line text-ink placeholder:text-ink-faint focus:border-brand-500 focus:ring-2 focus:ring-brand-500/25 outline-none transition-all"
                       placeholder="Min. 6 characters"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-faint"
                     >
                       {showPassword ? <HiEyeOff className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
                     </button>
@@ -226,11 +226,11 @@ const Signup = () => {
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <HiLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint w-4 h-4" />
                     <input
                       type={showConfirm ? 'text' : 'password'}
                       value={emailForm.confirmPassword}
@@ -239,23 +239,23 @@ const Signup = () => {
                       }
                       required
                       autoComplete="new-password"
-                      className={`w-full pl-9 pr-9 py-2.5 text-sm border rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 outline-none transition-all ${
+                      className={`w-full h-12 pl-10 pr-10 text-sm rounded-2xl bg-surface-sunken border text-ink placeholder:text-ink-faint focus:ring-2 outline-none transition-all ${
                         passwordsMismatch
-                          ? 'border-red-400 focus:border-red-400 focus:ring-red-200'
-                          : 'border-gray-200 dark:border-gray-600 focus:border-green-500 focus:ring-green-200'
+                          ? 'border-coral focus:border-coral focus:ring-coral/25'
+                          : 'border-line focus:border-brand-500 focus:ring-brand-500/25'
                       }`}
                       placeholder="Re-enter password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirm(!showConfirm)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-faint"
                     >
                       {showConfirm ? <HiEyeOff className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
                     </button>
                   </div>
                   {passwordsMismatch && (
-                    <p className="text-xs text-red-500 mt-1">Passwords don't match</p>
+                    <p className="text-xs text-coral mt-1">Passwords don't match</p>
                   )}
                 </div>
 
@@ -264,7 +264,7 @@ const Signup = () => {
                   disabled={loading}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  className="w-full py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-md transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-13 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-full shadow-brand transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -278,12 +278,12 @@ const Signup = () => {
               </form>
             )}
 
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-center text-sm text-ink-muted">
               Have an account?{' '}
               <Link
                 to="/login"
                 state={location.state}
-                className="text-green-600 dark:text-green-400 font-semibold hover:underline"
+                className="text-brand-600 font-bold hover:underline"
               >
                 Sign in
               </Link>
@@ -294,7 +294,7 @@ const Signup = () => {
         <div className="text-center mt-5">
           <Link
             to="/"
-            className="text-sm text-gray-400 hover:text-green-600 flex items-center justify-center gap-1"
+            className="text-sm text-white/50 hover:text-white flex items-center justify-center gap-1"
           >
             <HiArrowLeft className="w-3.5 h-3.5" /> Back to Home
           </Link>

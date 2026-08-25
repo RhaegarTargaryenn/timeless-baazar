@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { api, formatRupees, rupeesToPaise } from '../../lib/api';
 
 const inputClass =
-  'w-full px-3.5 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500';
+  'w-full px-3.5 py-2.5 text-sm bg-surface-raised border border-line rounded-xl text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-600';
 
 const emptyForm = {
   code: '',
@@ -45,9 +45,9 @@ const CouponCard = ({ coupon, onToggle, onDelete }) => {
   const status = statusOf(coupon);
 
   const tones = {
-    green: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+    green: 'bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-400',
     amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
-    gray: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
+    gray: 'bg-surface-sunken text-ink-muted',
   };
 
   const toggle = async () => {
@@ -76,11 +76,11 @@ const CouponCard = ({ coupon, onToggle, onDelete }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+    <div className="bg-surface-raised rounded-2xl border border-line p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-sm font-bold tracking-wide text-gray-900 dark:text-white">
+            <span className="font-mono text-sm font-bold tracking-wide text-ink">
               {coupon.code}
             </span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${tones[status.tone]}`}>
@@ -88,9 +88,9 @@ const CouponCard = ({ coupon, onToggle, onDelete }) => {
             </span>
           </div>
 
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{describe(coupon)}</p>
+          <p className="text-xs text-ink-muted mt-1">{describe(coupon)}</p>
 
-          <p className="text-[11px] text-gray-400 mt-1.5">
+          <p className="text-[11px] text-ink-faint mt-1.5">
             Used {coupon.usedCount}
             {coupon.usageLimit !== null ? ` of ${coupon.usageLimit}` : ' times'}
             {coupon.expiresAt &&
@@ -107,8 +107,8 @@ const CouponCard = ({ coupon, onToggle, onDelete }) => {
             disabled={busy}
             className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50 ${
               coupon.isActive
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-500'
+                ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-400'
+                : 'bg-surface-sunken text-ink-muted'
             }`}
           >
             {busy ? '...' : coupon.isActive ? 'On' : 'Off'}
@@ -116,7 +116,7 @@ const CouponCard = ({ coupon, onToggle, onDelete }) => {
           <button
             onClick={remove}
             disabled={busy}
-            className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+            className="p-2 rounded-lg text-ink-faint hover:text-coral hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50"
             aria-label="Delete code"
           >
             <Trash2 className="w-4 h-4" />
@@ -188,14 +188,14 @@ const AdminCoupons = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Offers</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <h1 className="text-xl font-bold text-ink">Offers</h1>
+          <p className="text-xs text-ink-muted mt-0.5">
             Discount codes customers can type at checkout
           </p>
         </div>
         <button
           onClick={() => setShowForm((s) => !s)}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold rounded-xl shadow-smooth shrink-0"
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 text-white text-sm font-bold rounded-xl shadow-card shrink-0"
         >
           {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
           {showForm ? 'Cancel' : 'New'}
@@ -205,11 +205,11 @@ const AdminCoupons = () => {
       {showForm && (
         <form
           onSubmit={submit}
-          className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 space-y-3"
+          className="bg-surface-raised rounded-2xl border border-line p-4 space-y-3"
         >
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
+              <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                 Code
               </label>
               <input
@@ -220,7 +220,7 @@ const AdminCoupons = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
+              <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                 Type
               </label>
               <select
@@ -236,7 +236,7 @@ const AdminCoupons = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
+              <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                 {form.type === 'percent' ? 'Percent' : 'Amount (₹)'}
               </label>
               <input
@@ -249,7 +249,7 @@ const AdminCoupons = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
+              <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                 Minimum order (₹)
               </label>
               <input
@@ -265,7 +265,7 @@ const AdminCoupons = () => {
 
           {form.type === 'percent' && (
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
+              <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                 Most it can take off (₹)
               </label>
               <input
@@ -276,7 +276,7 @@ const AdminCoupons = () => {
                 placeholder="No limit"
                 className={inputClass}
               />
-              <p className="text-[11px] text-gray-400 mt-1">
+              <p className="text-[11px] text-ink-faint mt-1">
                 Worth setting — without it, 20% off a very large order costs more than you meant.
               </p>
             </div>
@@ -284,7 +284,7 @@ const AdminCoupons = () => {
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
+              <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                 Total uses
               </label>
               <input
@@ -296,7 +296,7 @@ const AdminCoupons = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
+              <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                 Per customer
               </label>
               <input
@@ -308,7 +308,7 @@ const AdminCoupons = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
+              <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                 Ends on
               </label>
               <input
@@ -323,7 +323,7 @@ const AdminCoupons = () => {
           <button
             type="submit"
             disabled={saving}
-            className="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-xl disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full py-3 bg-brand-600 text-white font-bold rounded-xl disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             Create code
@@ -333,15 +333,15 @@ const AdminCoupons = () => {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <Loader2 className="w-7 h-7 text-green-600 animate-spin" />
+          <Loader2 className="w-7 h-7 text-brand-600 animate-spin" />
         </div>
       ) : coupons.length === 0 ? (
         <div className="text-center py-16">
-          <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <Ticket className="w-7 h-7 text-gray-400" />
+          <div className="w-14 h-14 bg-surface-sunken rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <Ticket className="w-7 h-7 text-ink-faint" />
           </div>
-          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">No offers yet</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-sm font-semibold text-ink mb-1">No offers yet</p>
+          <p className="text-xs text-ink-muted">
             Create a code and customers can type it at checkout.
           </p>
         </div>

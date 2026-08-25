@@ -1,53 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Trash2, Plus, Minus, X } from 'lucide-react';
+import { Check, ArrowRight, Tag, X, MapPin, Wallet, PartyPopper } from 'lucide-react';
 import toast from 'react-hot-toast';
+
 import { useAuth } from '../context/AuthContext';
 import VerifyEmailGate from '../components/VerifyEmailGate';
 import useCartStore from '../store/cartStore';
 import { api, formatRupees } from '../lib/api';
 import AddressManager from '../components/AddressManager';
 import PaymentMethod from '../components/PaymentMethod';
+import ForestHeader, { Sheet } from '../components/ForestHeader';
+import { Price } from '../components/ProductCard';
+import { pageIn, spring, tap, EASE } from '../lib/motion';
+import { cx } from '../components/ui';
+
+const STEPS = [
+  { id: 1, label: 'Address', icon: MapPin },
+  { id: 2, label: 'Payment', icon: Wallet },
+];
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { items, getTotal, updateQuantity, removeItem, clearCart, toOrderItems } = useCartStore();
-  const [currentStep, setCurrentStep] = useState(1); // 1: Cart, 2: Address, 3: Payment, 4: Success
+  const { items, getTotal, clearCart, toOrderItems } = useCartStore();
+  const { isVerified } = useAuth();
+
+  // The cart is its own page now, so checkout starts at the address. The old
+  // first step just re-listed what /cart already shows.
+  const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
-  const { user, isVerified } = useAuth();
-  
-  // Order data
+
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [discountCode, setDiscountCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discount }
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
-  const [placedOrder, setPlacedOrder] = useState(null);
 
-  // Redirect if cart is empty
   useEffect(() => {
-    if (items.length === 0 && currentStep < 4) {
-      navigate('/cart');
-    }
-  }, [items, currentStep, navigate]);
+    if (items.length === 0 && !orderNumber) navigate('/cart', { replace: true });
+  }, [items, orderNumber, navigate]);
 
-  // All paise. These figures are indicative -- the server recomputes every one
-  // of them from its own catalogue when the order is placed.
+  // All paise. Indicative — the server recomputes every figure from its own
+  // catalogue when the order is placed.
   const subtotal = getTotal();
   const discount = appliedCoupon?.discount ?? 0;
   const total = subtotal - discount;
 
   /**
-   * Coupons are checked by the API now.
+   * Coupons are checked by the API.
    *
    * The old version compared the typed text to the string 'SAVE10' in the
-   * browser: readable in devtools, valid forever, and reusable without limit.
-   * The server also tells us *why* a code failed, which is far more useful than
-   * "invalid code".
+   * browser: readable in devtools, valid forever, reusable without limit. The
+   * server also says *why* a code failed, which beats "invalid code".
    */
-  const handleApplyDiscount = async () => {
+  const applyCoupon = async () => {
     const code = discountCode.trim().toUpperCase();
     if (!code) return;
 
@@ -63,42 +70,8 @@ const Checkout = () => {
     }
   };
 
-  const handleRemoveDiscount = () => {
-    setDiscountCode('');
-    setAppliedCoupon(null);
-  };
-
-  const handleNextStep = () => {
-    if (currentStep === 1) {
-      // Cart validation
-      if (items.length === 0) {
-        toast.error('Your cart is empty');
-        return;
-      }
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      // Address validation
-      if (!selectedAddress) {
-        toast.error('Please select a delivery address');
-        return;
-      }
-      setCurrentStep(3);
-    } else if (currentStep === 3) {
-      // Payment validation
-      if (!selectedPayment) {
-        toast.error('Please select a payment method');
-        return;
-      }
-      handlePlaceOrder();
-    }
-  };
-
-  const handlePlaceOrder = async () => {
-    if (!selectedAddress || !selectedPayment) {
-      toast.error('Missing order information');
-      return;
-    }
-
+  const placeOrder = async () => {
+    if (!selectedAddress || !selectedPayment) return;
     setIsProcessing(true);
 
     try {
@@ -106,10 +79,8 @@ const Checkout = () => {
        * Notice what is not sent: prices, subtotal, total.
        *
        * The request says only what was chosen and how many. The server resolves
-       * every price from the live catalogue, re-checks the coupon, and computes
-       * the total itself. It also writes the Google Sheet, with retries, rather
-       * than the browser firing a no-cors request it can never read the result
-       * of.
+       * every price from the live catalogue, re-checks the coupon, computes the
+       * total, and writes the Google Sheet with retries.
        */
       const { order } = await api.post('/orders', {
         items: toOrderItems(),
@@ -129,360 +100,278 @@ const Checkout = () => {
       });
 
       setOrderNumber(order.orderNumber);
-      setPlacedOrder(order);
-      setCurrentStep(4);
       clearCart();
-
-      toast.success('Order placed!', { duration: 4000 });
+      toast.success('Order placed!');
     } catch (error) {
-      // A 409 means the catalogue moved under the customer -- something went
-      // out of stock, or a price changed -- so say that rather than "failed".
+      // A 409 means the catalogue moved under the customer — something went out
+      // of stock, or a price changed — so show what the server actually said.
       toast.error(error.message);
       setIsProcessing(false);
     }
   };
 
-  // Success Screen
-  if (currentStep === 4) {
+  const next = () => {
+    if (step === 1) {
+      if (!selectedAddress) {
+        toast.error('Pick a delivery address');
+        return;
+      }
+      setStep(2);
+      return;
+    }
+    if (!selectedPayment) {
+      toast.error('Pick a payment method');
+      return;
+    }
+    placeOrder();
+  };
+
+  // Google accounts arrive verified. An unverified email/password account is
+  // stopped here rather than at login — see VerifyEmailGate for why.
+  if (!isVerified) return <VerifyEmailGate />;
+
+  // ── Success ──────────────────────────────────────────────────────────────
+  if (orderNumber) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-green-900/10 dark:to-gray-800 py-8">
-        <div className="max-w-2xl mx-auto px-4">
+      <motion.div {...pageIn} className="min-h-screen bg-forest">
+        <div className="max-w-md mx-auto px-5 pt-16 pb-10 text-center">
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', duration: 0.6 }}
-            className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-smooth-lg border border-green-200 dark:border-green-800"
+            initial={{ scale: 0, rotate: -20 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ ...spring.sheet, delay: 0.1 }}
+            className="w-20 h-20 rounded-full bg-brand-500 mx-auto flex items-center justify-center"
           >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring' }}
-              className="w-24 h-24 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6"
-            >
-              <Check className="w-12 h-12 text-white" />
-            </motion.div>
+            <PartyPopper className="w-9 h-9 text-white" />
+          </motion.div>
 
-            <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              Order Placed Successfully!
-            </h2>
+          <motion.h1
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, duration: 0.4, ease: EASE }}
+            className="text-2xl font-extrabold text-white mt-6"
+          >
+            Order placed
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35 }}
+            className="text-sm text-white/60 mt-1.5"
+          >
+            We'll call to confirm before delivery.
+          </motion.p>
 
-            <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-2xl p-6 mb-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-2">Order ID</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400 text-center font-mono tracking-wider">
-                {orderNumber}
-              </p>
-            </div>
-
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                <span className="text-gray-600 dark:text-gray-400">Payment Method</span>
-                <span className="font-bold text-gray-900 dark:text-white">{selectedPayment?.name}</span>
-              </div>
-              <div className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                <span className="text-gray-600 dark:text-gray-400">Total Amount</span>
-                <span className="text-2xl font-bold text-green-600 dark:text-green-400">{formatRupees(total)}</span>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Delivery Address</p>
-                <p className="font-bold text-gray-900 dark:text-white">{selectedAddress?.street}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {selectedAddress?.city}, {selectedAddress?.state} {selectedAddress?.zipCode}
-                </p>
-              </div>
-            </div>
-
-            <p className="text-center text-gray-600 dark:text-gray-400 mb-6">
-              We will contact you shortly to confirm your order.
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, ...spring.sheet }}
+            className="mt-8 rounded-card bg-surface p-5 text-left"
+          >
+            <p className="text-xs text-ink-muted">Order number</p>
+            <p className="text-2xl font-extrabold text-ink tracking-wide font-mono mt-0.5">
+              {orderNumber}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/track-order')}
-                className="flex-1 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-2xl shadow-smooth hover:shadow-smooth-lg transition-all"
-              >
-                Track Order
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/products')}
-                className="flex-1 py-4 bg-white dark:bg-gray-700 border-2 border-green-500 text-green-600 dark:text-green-400 font-bold rounded-2xl hover:bg-green-50 dark:hover:bg-green-900/20 transition-all"
-              >
-                Continue Shopping
-              </motion.button>
+            <div className="h-px bg-line my-4" />
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-ink-muted">Total</span>
+              <Price paise={total} className="text-lg" />
+            </div>
+            <div className="flex items-center justify-between mt-1.5">
+              <span className="text-sm text-ink-muted">Payment</span>
+              <span className="text-sm font-semibold text-ink">Cash on delivery</span>
             </div>
           </motion.div>
+
+          <div className="flex flex-col gap-2.5 mt-6">
+            <motion.button
+              whileTap={tap}
+              onClick={() => navigate('/track-order')}
+              className="h-13 py-3.5 rounded-full bg-brand-600 text-white font-bold"
+            >
+              Track this order
+            </motion.button>
+            <motion.button
+              whileTap={tap}
+              onClick={() => navigate('/products')}
+              className="py-3.5 rounded-full bg-white/10 text-white font-semibold"
+            >
+              Keep shopping
+            </motion.button>
+          </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
+  // ── Steps ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Header with Back Button */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <button
-            onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : navigate('/cart')}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back
-          </button>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-            {currentStep === 1 && 'My Cart'}
-            {currentStep === 2 && 'Manage Addresses'}
-            {currentStep === 3 && 'Payment Methods'}
-          </h1>
-        </motion.div>
-
-        {/* Progress Indicator */}
-        <div className="flex items-center justify-between mb-8">
-          {[1, 2, 3].map((step) => (
-            <div key={step} className="flex items-center flex-1">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
-                step < currentStep
-                  ? 'bg-green-600 text-white'
-                  : step === currentStep
-                  ? 'bg-green-600 text-white ring-4 ring-green-200 dark:ring-green-900/50'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-              }`}>
-                {step < currentStep ? <Check className="w-5 h-5" /> : step}
-              </div>
-              {step < 3 && (
-                <div className={`flex-1 h-1 mx-2 rounded-full transition-all ${
-                  step < currentStep ? 'bg-green-600' : 'bg-gray-200 dark:bg-gray-700'
-                }`} />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Step Content */}
-        <AnimatePresence mode="wait">
-          {/* Step 1: Cart Summary */}
-          {currentStep === 1 && (
-            <motion.div
-              key="cart"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
-            >
-              {/* Cart Items */}
-              {items.map((item, index) => (
-                <motion.div
-                  key={`${item.productId}-${item.variantId}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-white dark:bg-gray-800 rounded-3xl p-4 shadow-smooth border border-gray-200 dark:border-gray-700"
-                >
-                  <div className="flex gap-4">
-                    {/* Product Image */}
-                    <div className="w-24 h-24 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-700 dark:via-green-900/20 dark:to-gray-800 rounded-2xl flex items-center justify-center flex-shrink-0">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-2xl" />
-                      ) : (
-                        <span className="text-4xl">
-                          </span>
-                      )}
-                    </div>
-
-                    {/* Product Info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base sm:text-lg text-gray-900 dark:text-white mb-1 truncate">{item.name}</h3>
-                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{item.nameHindi || 'original fresh'}</p>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="inline-block px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs sm:text-sm font-semibold rounded">
-                          {item.variantLabel}
-                        </span>
-                        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          {formatRupees(item.price)} each
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => updateQuantity(item.productId, item.variantId, Math.max(1, item.quantity - 1))}
-                            className="w-8 h-8 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors"
-                          >
-                            <Minus className="w-4 h-4" />
-                          </button>
-                          <span className="w-8 text-center font-bold text-gray-900 dark:text-white">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.productId, item.variantId, item.quantity + 1)}
-                            className="w-8 h-8 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        {/* Price */}
-                        <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{formatRupees(item.price * item.quantity)}</p>
-
-                        {/* Delete */}
-                        <button
-                          onClick={() => removeItem(item.productId, item.variantId)}
-                          className="ml-auto text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-
-              {/* Discount Code */}
-              <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 shadow-smooth border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    value={discountCode}
-                    onChange={(e) => setDiscountCode(e.target.value)}
-                    placeholder="Enter Discount Code"
-                    disabled={Boolean(appliedCoupon) || checkingCoupon}
-                    className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
-                  />
-                  {appliedCoupon ? (
-                    <button
-                      onClick={handleRemoveDiscount}
-                      className="px-6 py-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex items-center gap-2"
-                    >
-                      <X className="w-4 h-4" />
-                      Remove
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleApplyDiscount}
-                      disabled={checkingCoupon || !discountCode.trim()}
-                      className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50"
-                    >
-                      {checkingCoupon ? 'Checking...' : 'Apply'}
-                    </button>
-                  )}
-                </div>
-                {appliedCoupon && (
-                  <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
-                    <Check className="w-4 h-4" />
-                    Discount code applied successfully!
-                  </p>
+    <motion.div {...pageIn} className="min-h-screen bg-surface">
+      <ForestHeader
+        title="Checkout"
+        showBack={false}
+        className="[&_h1]:text-white"
+      >
+        <div className="flex items-center gap-2 mt-5">
+          {STEPS.map(({ id, label, icon: Icon }) => {
+            const done = step > id;
+            const active = step === id;
+            return (
+              <button
+                key={id}
+                onClick={() => done && setStep(id)}
+                disabled={!done}
+                className={cx(
+                  'flex-1 flex items-center gap-2 px-3 h-11 rounded-full text-xs font-semibold transition-colors',
+                  active && 'bg-white text-forest',
+                  done && 'bg-white/15 text-white',
+                  !active && !done && 'bg-white/5 text-white/40'
                 )}
-              </div>
-
-              {/* Order Summary */}
-              <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-smooth border border-gray-200 dark:border-gray-700">
-                <div className="space-y-3 mb-4">
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>Subtotal</span>
-                    <span className="font-bold">{formatRupees(subtotal)}</span>
-                  </div>
-                  {appliedCoupon && (
-                    <div className="flex justify-between text-green-600 dark:text-green-400">
-                      <span>Discount ({appliedCoupon?.code})</span>
-                      <span className="font-bold">- {formatRupees(discount)}</span>
-                    </div>
+              >
+                <span
+                  className={cx(
+                    'w-5 h-5 rounded-full flex items-center justify-center shrink-0',
+                    active ? 'bg-forest text-white' : done ? 'bg-brand-500 text-white' : 'bg-white/10'
                   )}
-                  <div className="h-px bg-gray-200 dark:bg-gray-700"></div>
-                  <div className="flex justify-between text-xl font-bold text-gray-900 dark:text-white">
-                    <span>Total</span>
-                    <span className="text-green-600 dark:text-green-400">{formatRupees(total)}</span>
-                  </div>
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleNextStep}
-                  className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-2xl shadow-smooth hover:shadow-smooth-lg transition-all flex items-center justify-center gap-2"
                 >
-                  Checkout
-                  <ArrowRight className="w-5 h-5" />
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
+                  {done ? <Check className="w-3 h-3" strokeWidth={3} /> : <Icon className="w-3 h-3" />}
+                </span>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </ForestHeader>
 
-          {/* Step 2: Address Selection */}
-          {currentStep === 2 && (
-            <motion.div
-              key="address"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
+      <Sheet className="px-4 pt-5 pb-36 sm:pb-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -24 }}
+            transition={{ duration: 0.24, ease: EASE }}
+          >
+            {step === 1 ? (
               <AddressManager
                 onSelectAddress={setSelectedAddress}
                 selectedAddressId={selectedAddress?._id}
               />
+            ) : (
+              <>
+                <PaymentMethod
+                  onSelectMethod={setSelectedPayment}
+                  selectedMethod={selectedPayment}
+                />
 
-              {/* Continue Button */}
-              {selectedAddress && (
-                <motion.button
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleNextStep}
-                  className="w-full mt-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-2xl shadow-smooth hover:shadow-smooth-lg transition-all flex items-center justify-center gap-2"
-                >
-                  Continue to Payment
-                  <ArrowRight className="w-5 h-5" />
-                </motion.button>
-              )}
-            </motion.div>
-          )}
-
-          {/* Step 3: Payment Method */}
-          {currentStep === 3 && (
-            <motion.div
-              key="payment"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <PaymentMethod
-                onSelectMethod={setSelectedPayment}
-                selectedMethod={selectedPayment}
-              />
-
-              {/* Continue Button */}
-              {selectedPayment && (
-                <motion.button
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleNextStep}
-                  disabled={isProcessing}
-                  className="w-full mt-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-2xl shadow-smooth hover:shadow-smooth-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isProcessing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Processing...
-                    </>
+                {/* Coupon */}
+                <div className="mt-6">
+                  <p className="text-sm font-bold text-ink mb-2">Have a code?</p>
+                  {appliedCoupon ? (
+                    <div className="flex items-center gap-3 p-3 rounded-2xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900">
+                      <Tag className="w-4 h-4 text-brand-700 dark:text-brand-400 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-ink font-mono">
+                          {appliedCoupon.code}
+                        </p>
+                        <p className="text-xs text-brand-700 dark:text-brand-400">
+                          {formatRupees(appliedCoupon.discount)} off
+                        </p>
+                      </div>
+                      <motion.button
+                        whileTap={tap}
+                        onClick={() => {
+                          setDiscountCode('');
+                          setAppliedCoupon(null);
+                        }}
+                        aria-label="Remove code"
+                        className="w-8 h-8 rounded-full bg-surface-raised flex items-center justify-center text-ink-muted"
+                      >
+                        <X className="w-4 h-4" />
+                      </motion.button>
+                    </div>
                   ) : (
-                    <>
-                      Place Order
-                      <Check className="w-5 h-5" />
-                    </>
+                    <div className="flex gap-2">
+                      <input
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                        placeholder="Enter code"
+                        className="flex-1 h-12 px-4 rounded-2xl bg-surface-sunken border border-line text-ink font-mono tracking-wide placeholder:font-sans placeholder:tracking-normal placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                      />
+                      <motion.button
+                        whileTap={tap}
+                        onClick={applyCoupon}
+                        disabled={checkingCoupon || !discountCode.trim()}
+                        className="px-5 h-12 rounded-2xl bg-forest text-white text-sm font-bold disabled:opacity-40"
+                      >
+                        {checkingCoupon ? '...' : 'Apply'}
+                      </motion.button>
+                    </div>
                   )}
-                </motion.button>
-              )}
-            </motion.div>
-          )}
+                </div>
+
+                {/* Summary */}
+                <motion.div layout className="mt-6 p-4 rounded-card bg-surface-sunken">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-ink-muted">Subtotal</span>
+                    <span className="font-semibold text-ink tabular">
+                      {formatRupees(subtotal)}
+                    </span>
+                  </div>
+                  {discount > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="flex items-center justify-between text-sm mt-2 text-brand-700 dark:text-brand-400"
+                    >
+                      <span>Discount</span>
+                      <span className="font-semibold tabular">−{formatRupees(discount)}</span>
+                    </motion.div>
+                  )}
+                  <div className="flex items-center justify-between text-sm mt-2">
+                    <span className="text-ink-muted">Delivery</span>
+                    <span className="font-semibold text-brand-600">Free</span>
+                  </div>
+                  <div className="h-px bg-line my-3" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-ink">Total</span>
+                    <Price paise={total} className="text-xl" />
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </motion.div>
         </AnimatePresence>
-      </div>
-    </div>
+
+        <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] sm:bottom-4 mt-6 z-30">
+          <motion.button
+            whileTap={tap}
+            onClick={next}
+            disabled={isProcessing}
+            className="w-full h-14 rounded-full bg-brand-600 text-white font-bold shadow-brand flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            {isProcessing ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                Placing order...
+              </>
+            ) : step === 1 ? (
+              <>
+                Continue to payment
+                <ArrowRight className="w-4 h-4" />
+              </>
+            ) : (
+              <>
+                Place order
+                <span className="opacity-70">·</span>
+                <span className="tabular">{formatRupees(total)}</span>
+              </>
+            )}
+          </motion.button>
+        </div>
+      </Sheet>
+    </motion.div>
   );
 };
 

@@ -83,7 +83,7 @@ const PWAInstallPrompt = () => {
           transition={{ duration: 0.3 }}
           className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-50"
         >
-          <div className="bg-gradient-to-br from-orange-500 to-accent-600 text-white rounded-2xl shadow-glow-lg p-5 border-2 border-white/20">
+          <div className="bg-forest">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
@@ -124,7 +124,7 @@ const PWAInstallPrompt = () => {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={handleInstall}
-                className="flex-1 bg-white text-orange-600 font-bold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                className="flex-1 bg-white text-brand-600 font-bold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
                 <HiDownload className="w-5 h-5" />
                 Install Now

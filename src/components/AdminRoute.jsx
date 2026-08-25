@@ -4,9 +4,9 @@ import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Loader = ({ label }) => (
-  <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-gray-900">
-    <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-    <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+  <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-surface-sunken">
+    <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
+    <p className="text-sm text-ink-muted">{label}</p>
   </div>
 );
 
@@ -35,20 +35,20 @@ const AdminRoute = ({ children }) => {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50 dark:bg-gray-900">
-        <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-8 text-center shadow-smooth">
-          <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+      <div className="min-h-screen flex items-center justify-center px-4 bg-surface-sunken">
+        <div className="w-full max-w-sm bg-surface-raised rounded-card border border-line p-8 text-center shadow-card">
+          <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <ShieldAlert className="w-7 h-7 text-amber-600 dark:text-amber-400" />
           </div>
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-lg font-bold text-ink mb-2">
             This area is for the shop owner
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-sm text-ink-muted mb-6">
             Your account does not have access to the admin panel.
           </p>
           <Link
             to="/"
-            className="inline-block w-full py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-2xl"
+            className="inline-block w-full py-3 bg-brand-600 text-white font-bold rounded-full shadow-brand"
           >
             Back to shop
           </Link>

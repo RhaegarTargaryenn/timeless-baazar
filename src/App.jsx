@@ -43,7 +43,7 @@ const PageLoader = () => (
  * Home and the shop paint their own dark header, so the shared light one would
  * stack a second bar on top of it. Everything else still needs it.
  */
-const OWN_HEADER = ['/', '/products'];
+const OWN_HEADER = ['/', '/products', '/cart', '/checkout', '/track-order'];
 
 const StorefrontShell = ({ children }) => {
   const { pathname } = useLocation();

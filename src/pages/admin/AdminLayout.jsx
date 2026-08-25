@@ -1,7 +1,10 @@
 import React from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Package, Ticket, Store, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { spring, tap } from '../../lib/motion';
+import { cx } from '../../components/ui';
 
 const NAV = [
   { to: '/admin/products', label: 'Products', icon: Package },
@@ -19,19 +22,19 @@ const AdminLayout = () => {
   const { profile, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 sm:pb-0">
+    <div className="min-h-screen bg-surface-sunken pb-24 sm:pb-0">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-40 bg-forest">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white font-extrabold text-sm shrink-0">
               TB
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+              <p className="text-sm font-bold text-white leading-tight">
                 Shop Admin
               </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+              <p className="text-[11px] text-white/50 truncate">
                 {profile?.email}
               </p>
             </div>
@@ -44,11 +47,10 @@ const AdminLayout = () => {
                 key={to}
                 to={to}
                 className={({ isActive }) =>
-                  `flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                    isActive
-                      ? 'bg-green-50 dark:bg-green-900/25 text-green-700 dark:text-green-400'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`
+                  cx(
+                    'flex items-center gap-2 px-3.5 h-10 rounded-full text-sm font-semibold transition-colors',
+                    isActive ? 'bg-white text-forest' : 'text-white/60 hover:text-white'
+                  )
                 }
               >
                 <Icon className="w-4 h-4" />
@@ -61,14 +63,14 @@ const AdminLayout = () => {
             <Link
               to="/"
               title="View the shop"
-              className="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white/70 hover:bg-white/10 transition-colors"
             >
               <Store className="w-5 h-5" />
             </Link>
             <button
               onClick={signOut}
               title="Sign out"
-              className="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition-colors"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white/70 hover:bg-white/10 hover:text-coral transition-colors"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -80,27 +82,40 @@ const AdminLayout = () => {
         <Outlet />
       </main>
 
-      {/* Phones: nav sits under the thumb */}
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 pb-[env(safe-area-inset-bottom)]">
-        <div className="grid grid-cols-2">
+      {/* Phones: a floating pill, the same shape the storefront uses */}
+      <div
+        className="sm:hidden fixed inset-x-0 bottom-0 z-40 pointer-events-none flex justify-center px-4"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+      >
+        <nav className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-full bg-forest shadow-float">
           {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex flex-col items-center gap-1 py-3 text-[11px] font-semibold transition-colors ${
-                  isActive
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-gray-500 dark:text-gray-400'
-                }`
-              }
-            >
-              <Icon className="w-5 h-5" />
-              {label}
+            <NavLink key={to} to={to} aria-label={label}>
+              {({ isActive }) => (
+                <motion.span
+                  whileTap={tap}
+                  className={cx(
+                    'relative flex items-center gap-2 h-12 px-5 rounded-full transition-colors',
+                    isActive ? 'text-forest' : 'text-white/60'
+                  )}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="admin-nav-pill"
+                      transition={spring.layout}
+                      className="absolute inset-0 rounded-full bg-white"
+                    />
+                  )}
+                  <span className="relative flex items-center gap-2">
+                    <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                    <span className="text-sm font-bold">{label}</span>
+                  </span>
+                </motion.span>
+              )}
             </NavLink>
           ))}
-        </div>
-      </nav>
+        </nav>
+      </div>
+
     </div>
   );
 };

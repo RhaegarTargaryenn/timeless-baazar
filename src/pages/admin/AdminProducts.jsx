@@ -65,22 +65,22 @@ const PriceCell = ({ product, variant, onSaved }) => {
     return (
       <button
         onClick={() => setEditing(true)}
-        className="group flex items-baseline gap-1.5 px-2.5 py-1.5 -mx-1 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+        className="group flex items-baseline gap-1.5 px-2.5 py-1.5 -mx-1 rounded-lg hover:bg-surface-sunken transition-colors"
       >
-        <span className="text-[11px] text-gray-500 dark:text-gray-400">{variant.label}</span>
-        <span className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">
+        <span className="text-[11px] text-ink-muted">{variant.label}</span>
+        <span className="text-sm font-bold text-ink tabular-nums">
           {formatRupees(variant.price)}
         </span>
-        <Pencil className="w-3 h-3 text-gray-300 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors" />
+        <Pencil className="w-3 h-3 text-ink-faint group-hover:text-brand-600 transition-colors" />
       </button>
     );
   }
 
   return (
     <div className="flex items-center gap-1">
-      <span className="text-[11px] text-gray-500 dark:text-gray-400 w-10">{variant.label}</span>
+      <span className="text-[11px] text-ink-muted w-10">{variant.label}</span>
       <div className="relative">
-        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-gray-400">₹</span>
+        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-ink-faint">₹</span>
         <input
           type="number"
           inputMode="decimal"
@@ -92,13 +92,13 @@ const PriceCell = ({ product, variant, onSaved }) => {
             if (e.key === 'Escape') cancel();
           }}
           disabled={saving}
-          className="w-24 pl-6 pr-2 py-1.5 text-sm font-bold tabular-nums border-2 border-green-500 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-200"
+          className="w-24 pl-6 pr-2 py-1.5 text-sm font-bold tabular-nums border-2 border-brand-600 rounded-lg bg-surface-raised text-ink focus:outline-none focus:ring-2 focus:ring-brand-500/25"
         />
       </div>
       <button
         onClick={save}
         disabled={saving}
-        className="p-1.5 rounded-lg bg-green-600 text-white disabled:opacity-50"
+        className="p-1.5 rounded-lg bg-brand-600 text-white disabled:opacity-50"
         aria-label="Save price"
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -106,7 +106,7 @@ const PriceCell = ({ product, variant, onSaved }) => {
       <button
         onClick={cancel}
         disabled={saving}
-        className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+        className="p-1.5 rounded-lg bg-surface-sunken text-ink-muted"
         aria-label="Cancel"
       >
         <X className="w-4 h-4" />
@@ -134,14 +134,14 @@ const ProductRow = ({ product, onChanged }) => {
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-2xl border p-3 transition-colors ${
+      className={`bg-surface-raised rounded-2xl border p-3 transition-colors ${
         product.isActive
-          ? 'border-gray-200 dark:border-gray-700'
-          : 'border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/60 dark:bg-gray-800/40'
+          ? 'border-line'
+          : 'border-dashed border-line bg-surface-sunken/60'
       }`}
     >
       <div className="flex gap-3">
-        <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0">
+        <div className="w-16 h-16 rounded-xl bg-surface-sunken overflow-hidden shrink-0">
           {product.images?.[0] ? (
             <img
               src={product.images[0]}
@@ -150,7 +150,7 @@ const ProductRow = ({ product, onChanged }) => {
               className={`w-full h-full object-cover ${product.isActive ? '' : 'opacity-40 grayscale'}`}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-300">
+            <div className="w-full h-full flex items-center justify-center text-ink-faint">
               <PackageX className="w-6 h-6" />
             </div>
           )}
@@ -159,10 +159,10 @@ const ProductRow = ({ product, onChanged }) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white truncate">
+              <h3 className="text-sm font-bold text-ink truncate">
                 {product.name}
               </h3>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+              <p className="text-[11px] text-ink-muted truncate">
                 {product.nameHindi || product.category?.name}
               </p>
             </div>
@@ -174,8 +174,8 @@ const ProductRow = ({ product, onChanged }) => {
                 title={product.isActive ? 'Hide from shop' : 'Show on shop'}
                 className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
                   product.isActive
-                    ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
-                    : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'text-brand-600 hover:bg-surface-sunken'
+                    : 'text-ink-faint hover:bg-surface-sunken'
                 }`}
               >
                 {toggling ? (
@@ -189,7 +189,7 @@ const ProductRow = ({ product, onChanged }) => {
               <Link
                 to={`/admin/products/${product._id}`}
                 title="Edit"
-                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-lg text-ink-muted hover:bg-surface-sunken transition-colors"
               >
                 <Pencil className="w-4 h-4" />
               </Link>
@@ -281,8 +281,8 @@ const AdminProducts = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3">
-        <Loader2 className="w-7 h-7 text-green-600 animate-spin" />
-        <p className="text-sm text-gray-500">Loading your products...</p>
+        <Loader2 className="w-7 h-7 text-brand-600 animate-spin" />
+        <p className="text-sm text-ink-muted">Loading your products...</p>
       </div>
     );
   }
@@ -290,10 +290,10 @@ const AdminProducts = () => {
   if (error) {
     return (
       <div className="text-center py-20">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{error}</p>
+        <p className="text-sm text-ink-muted mb-4">{error}</p>
         <button
           onClick={load}
-          className="px-5 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-xl"
+          className="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl"
         >
           Try again
         </button>
@@ -305,35 +305,35 @@ const AdminProducts = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Products</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <h1 className="text-xl font-bold text-ink">Products</h1>
+          <p className="text-xs text-ink-muted mt-0.5">
             {products.length} total
             {hiddenCount > 0 && ` · ${hiddenCount} hidden`}
           </p>
         </div>
         <Link
           to="/admin/products/new"
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold rounded-xl shadow-smooth shrink-0"
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 text-white text-sm font-bold rounded-xl shadow-card shrink-0"
         >
           <Plus className="w-4 h-4" />
           Add
         </Link>
       </div>
 
-      <div className="bg-green-50 dark:bg-green-900/15 border border-green-200 dark:border-green-800/40 rounded-xl px-3.5 py-2.5">
-        <p className="text-xs text-green-800 dark:text-green-300">
+      <div className="bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900 rounded-xl px-3.5 py-2.5">
+        <p className="text-xs text-brand-800 dark:text-brand-300">
           Tap any price to change it. Changes appear on the shop straight away.
         </p>
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search products..."
-          className="w-full pl-10 pr-4 py-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+          className="w-full pl-10 pr-4 py-3 text-sm bg-surface-raised border border-line rounded-xl text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-600"
         />
       </div>
 
@@ -348,15 +348,15 @@ const AdminProducts = () => {
             onClick={() => setVisibility(id)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
               visibility === id
-                ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+                ? 'bg-forest text-white'
+                : 'bg-surface-raised text-ink-muted border border-line'
             }`}
           >
             {label}
           </button>
         ))}
 
-        <div className="w-px bg-gray-200 dark:bg-gray-700 mx-1 shrink-0" />
+        <div className="w-px bg-line mx-1 shrink-0" />
 
         {[{ slug: 'all', name: 'Every category' }, ...categories].map((category) => (
           <button
@@ -364,8 +364,8 @@ const AdminProducts = () => {
             onClick={() => setCategoryFilter(category.slug)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
               categoryFilter === category.slug
-                ? 'bg-green-600 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+                ? 'bg-brand-600 text-white'
+                : 'bg-surface-raised text-ink-muted border border-line'
             }`}
           >
             {category.name}
@@ -375,7 +375,7 @@ const AdminProducts = () => {
 
       {filtered.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-ink-muted">
             No products match that.
           </p>
         </div>

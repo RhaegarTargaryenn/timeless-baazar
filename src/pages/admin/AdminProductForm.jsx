@@ -16,17 +16,17 @@ const emptyVariant = () => ({ label: '', price: '', mrp: '', isActive: true });
 
 const Field = ({ label, hint, error, children }) => (
   <div>
-    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
+    <label className="block text-xs font-semibold text-ink-muted mb-1.5">
       {label}
     </label>
     {children}
-    {hint && !error && <p className="text-[11px] text-gray-400 mt-1">{hint}</p>}
-    {error && <p className="text-[11px] text-red-500 mt-1">{error}</p>}
+    {hint && !error && <p className="text-[11px] text-ink-faint mt-1">{hint}</p>}
+    {error && <p className="text-[11px] text-coral mt-1">{error}</p>}
   </div>
 );
 
 const inputClass =
-  'w-full px-3.5 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500';
+  'w-full px-3.5 py-2.5 text-sm bg-surface-raised border border-line rounded-xl text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-600';
 
 const AdminProductForm = () => {
   const { id } = useParams();
@@ -196,7 +196,7 @@ const AdminProductForm = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 className="w-7 h-7 text-green-600 animate-spin" />
+        <Loader2 className="w-7 h-7 text-brand-600 animate-spin" />
       </div>
     );
   }
@@ -206,16 +206,16 @@ const AdminProductForm = () => {
       <div className="flex items-center gap-3">
         <Link
           to="/admin/products"
-          className="p-2 -ml-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="p-2 -ml-2 rounded-xl text-ink-muted hover:bg-surface-sunken"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-xl font-bold text-ink">
           {isNew ? 'Add product' : form.name}
         </h1>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 space-y-4">
+      <div className="bg-surface-raised rounded-2xl border border-line p-4 space-y-4">
         <Field label="Product name" error={fieldErrors.name}>
           <input
             value={form.name}
@@ -275,7 +275,7 @@ const AdminProductForm = () => {
             <img
               src={form.images[0]}
               alt=""
-              className="mt-2 w-20 h-20 object-cover rounded-xl border border-gray-200 dark:border-gray-600"
+              className="mt-2 w-20 h-20 object-cover rounded-xl border border-line"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}
@@ -285,48 +285,48 @@ const AdminProductForm = () => {
       </div>
 
       {/* Sizes and prices */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-surface-raised rounded-2xl border border-line p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white">Sizes & prices</h2>
+          <h2 className="text-sm font-bold text-ink">Sizes & prices</h2>
           <button
             type="button"
             onClick={() => setForm((f) => ({ ...f, variants: [...f.variants, emptyVariant()] }))}
-            className="flex items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400"
+            className="flex items-center gap-1 text-xs font-semibold text-brand-600"
           >
             <Plus className="w-3.5 h-3.5" /> Add size
           </button>
         </div>
 
         {fieldErrors.variants && (
-          <p className="text-[11px] text-red-500 mb-2">{fieldErrors.variants}</p>
+          <p className="text-[11px] text-coral mb-2">{fieldErrors.variants}</p>
         )}
 
         <div className="space-y-3">
           {form.variants.map((variant, index) => (
             <div
               key={variant._id ?? index}
-              className="grid grid-cols-[1fr_auto] gap-2 items-start p-3 bg-gray-50 dark:bg-gray-700/40 rounded-xl"
+              className="grid grid-cols-[1fr_auto] gap-2 items-start p-3 bg-surface-sunken rounded-xl"
             >
               <div className="grid grid-cols-3 gap-2">
                 <input
                   value={variant.label}
                   onChange={(e) => setVariant(index, 'label', e.target.value)}
                   placeholder="1 kg"
-                  className="px-2.5 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-200"
+                  className="px-2.5 py-2 text-sm bg-surface-raised border border-line rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand-500/25"
                 />
                 <div className="relative">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ink-faint">₹</span>
                   <input
                     type="number"
                     inputMode="decimal"
                     value={variant.price}
                     onChange={(e) => setVariant(index, 'price', e.target.value)}
                     placeholder="132"
-                    className="w-full pl-5 pr-2 py-2 text-sm tabular-nums bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-200"
+                    className="w-full pl-5 pr-2 py-2 text-sm tabular-nums bg-surface-raised border border-line rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand-500/25"
                   />
                 </div>
                 <div className="relative">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">₹</span>
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ink-faint">₹</span>
                   <input
                     type="number"
                     inputMode="decimal"
@@ -334,7 +334,7 @@ const AdminProductForm = () => {
                     onChange={(e) => setVariant(index, 'mrp', e.target.value)}
                     placeholder="MRP"
                     title="Optional. Leave empty for no discount badge."
-                    className="w-full pl-5 pr-2 py-2 text-sm tabular-nums bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-200"
+                    className="w-full pl-5 pr-2 py-2 text-sm tabular-nums bg-surface-raised border border-line rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-brand-500/25"
                   />
                 </div>
               </div>
@@ -346,8 +346,8 @@ const AdminProductForm = () => {
                   title={variant.isActive ? 'In stock' : 'Out of stock'}
                   className={`px-2.5 py-2 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ${
                     variant.isActive
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                      : 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
+                      ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-400'
+                      : 'bg-surface-sunken text-ink-muted'
                   }`}
                 >
                   {variant.isActive ? 'In stock' : 'Out'}
@@ -361,7 +361,7 @@ const AdminProductForm = () => {
                         variants: f.variants.filter((_, i) => i !== index),
                       }))
                     }
-                    className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="p-2 rounded-lg text-ink-faint hover:text-coral hover:bg-red-50 dark:hover:bg-red-950/30"
                     aria-label="Remove size"
                   >
                     <X className="w-4 h-4" />
@@ -372,22 +372,22 @@ const AdminProductForm = () => {
           ))}
         </div>
 
-        <p className="text-[11px] text-gray-400 mt-3">
+        <p className="text-[11px] text-ink-faint mt-3">
           The third box is the crossed-out price. Leave it empty and no discount badge shows.
         </p>
       </div>
 
       {/* Visibility */}
-      <label className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 cursor-pointer">
+      <label className="flex items-center gap-3 bg-surface-raised rounded-2xl border border-line p-4 cursor-pointer">
         <input
           type="checkbox"
           checked={form.isActive}
           onChange={(e) => setField('isActive', e.target.checked)}
-          className="w-5 h-5 rounded accent-green-600"
+          className="w-5 h-5 rounded accent-brand-600"
         />
         <div>
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">Show on the shop</p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="text-sm font-semibold text-ink">Show on the shop</p>
+          <p className="text-[11px] text-ink-muted">
             Uncheck to hide this product from customers without deleting it
           </p>
         </div>
@@ -397,7 +397,7 @@ const AdminProductForm = () => {
         <button
           type="submit"
           disabled={saving}
-          className="flex-1 py-3.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-2xl shadow-smooth disabled:opacity-60 flex items-center justify-center gap-2"
+          className="flex-1 py-3.5 bg-brand-600 text-white font-bold rounded-2xl shadow-card disabled:opacity-60 flex items-center justify-center gap-2"
         >
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
           {isNew ? 'Add product' : 'Save changes'}
@@ -408,7 +408,7 @@ const AdminProductForm = () => {
             type="button"
             onClick={handleDelete}
             disabled={deleting}
-            className="px-4 py-3.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-2xl disabled:opacity-60"
+            className="px-4 py-3.5 bg-red-50 dark:bg-red-950/30 text-coral font-bold rounded-2xl disabled:opacity-60"
             aria-label="Delete product"
           >
             {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}

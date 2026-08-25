@@ -53,23 +53,23 @@ const VerifyEmailGate = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-forest flex items-center justify-center px-4 py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white dark:bg-gray-800 rounded-3xl shadow-smooth-lg border border-gray-200 dark:border-gray-700 p-8 text-center"
+        className="w-full max-w-md bg-surface rounded-sheet shadow-lift p-8 text-center"
       >
-        <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <MailCheck className="w-8 h-8 text-green-600 dark:text-green-400" />
+        <div className="w-16 h-16 bg-brand-50 dark:bg-brand-950/40 rounded-2xl flex items-center justify-center mx-auto mb-5">
+          <MailCheck className="w-8 h-8 text-brand-600" />
         </div>
 
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-xl font-extrabold text-ink mb-2">
           Confirm your email to order
         </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+        <p className="text-sm text-ink-muted mb-1">
           We need a working email to send your order confirmation.
         </p>
-        <p className="text-sm font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 rounded-xl px-4 py-2.5 my-4 break-all">
+        <p className="text-sm font-semibold text-ink bg-surface-sunken rounded-2xl px-4 py-3 my-4 break-all">
           {user?.email}
         </p>
 
@@ -89,7 +89,7 @@ const VerifyEmailGate = () => {
             whileTap={{ scale: 0.98 }}
             onClick={handleRecheck}
             disabled={checking}
-            className="w-full py-3.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-2xl shadow-smooth flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full h-13 py-3.5 bg-brand-600 text-white font-bold rounded-full shadow-brand flex items-center justify-center gap-2 disabled:opacity-60"
           >
             <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
             {checking ? 'Checking...' : "I've verified — continue"}
@@ -98,13 +98,13 @@ const VerifyEmailGate = () => {
           <button
             onClick={handleResend}
             disabled={sending}
-            className="w-full py-3 text-sm font-semibold text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-2xl transition-colors disabled:opacity-60"
+            className="w-full py-3 text-sm font-semibold text-brand-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-2xl transition-colors disabled:opacity-60"
           >
             {sending ? 'Sending...' : 'Resend verification email'}
           </button>
         </div>
 
-        <p className="text-xs text-gray-400 mt-6">
+        <p className="text-xs text-ink-faint mt-6">
           Your cart is saved — nothing is lost.
         </p>
       </motion.div>
