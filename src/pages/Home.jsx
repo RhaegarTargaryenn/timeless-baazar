@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, Search, ShoppingCart, Phone, ChevronRight } from 'lucide-react';
+import { Navigation, Search, ShoppingCart, Phone, ChevronRight } from 'lucide-react';
 
 import { useProducts } from '../hooks/useProducts';
 import useCartStore from '../store/cartStore';
@@ -20,6 +20,16 @@ const CATEGORY_EMOJI = {
 };
 
 /**
+ * Bubble labels are one word.
+ *
+ * The shop's category names are full titles — "Daal & Pulses", "Other Grocery"
+ * — and at bubble width they truncated to "Daal &…", which reads as broken
+ * rather than abbreviated. The first word is the part a customer scans for.
+ */
+const shortLabel = (name = '') =>
+  name.split(/\s*&\s*/)[0].replace(/^Other\s+/i, '').trim() || name;
+
+/**
  * The two promo tiles under the product row.
  *
  * Warm pastels against all the green — the one place on the page that is not
@@ -27,27 +37,29 @@ const CATEGORY_EMOJI = {
  */
 const PROMOS = [
   {
-    title: 'Everyday grocery',
+    title: 'Grocery',
     sub: 'Order by 12:15 pm',
     foot: 'Free delivery',
     className: 'bg-cream',
+    image: '/category/other_grocery_category.jpg',
     to: '/products?category=grocery',
   },
   {
-    title: 'Bulk & wholesale',
+    title: 'Wholesale',
     sub: 'Order by 1:30 pm',
     foot: 'Call to arrange',
     className: 'bg-rose-100 dark:bg-rose-950/40',
+    image: '/category/dal_category.jpg',
     to: '/products?category=daal',
   },
 ];
 
-const SectionHead = ({ title, to }) => (
+const SectionHead = ({ title, to, cta = 'See more' }) => (
   <div className="flex items-baseline justify-between gap-3 mb-3 px-4">
     <h2 className="text-[17px] font-extrabold text-ink">{title}</h2>
     {to && (
       <Link to={to} className="text-[13px] font-semibold text-coral shrink-0">
-        See more
+        {cta}
       </Link>
     )}
   </div>
@@ -61,14 +73,31 @@ const Home = () => {
     state.items.reduce((sum, item) => sum + item.quantity, 0)
   );
 
-  // Nothing is curated yet, so this is simply the shop's own ordering.
+  // Nothing is curated yet, so this is simply the shop's own ordering: the
+  // first stretch fills the rail, the next fills the grid below it, and no
+  // product appears in both.
   const featured = products.slice(0, 8);
+  const featuredGrid = products.slice(8, 14);
 
   return (
     <motion.div {...pageIn} className="min-h-screen bg-surface">
       {/* ── Forest header ────────────────────────────────────────────────── */}
       <div className="relative bg-forest pt-3">
-        <div className="px-4 flex items-center gap-3">
+        {/*
+          A faint vertical weave over the flat green. At this contrast it never
+          reads as stripes — it just stops the largest block of colour on the
+          page from looking like an empty fill.
+        */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 9px)',
+          }}
+        />
+
+        <div className="relative px-4 flex items-center gap-3">
           <button
             onClick={() => navigate('/products')}
             className="relative flex-1 h-12 pl-11 pr-4 rounded-full bg-white text-left text-sm text-forest/40"
@@ -98,11 +127,11 @@ const Home = () => {
           </Link>
         </div>
 
-        <div className="text-center mt-3">
+        <div className="relative text-center mt-3">
           <p className="text-[11px] text-white/45 font-medium">Delivering to</p>
           <p className="text-sm font-bold text-brand-400 inline-flex items-center gap-1.5 mt-0.5">
-            <MapPin className="w-3.5 h-3.5" />
             Your doorstep
+            <Navigation className="w-3.5 h-3.5 fill-current" />
           </p>
         </div>
 
@@ -110,11 +139,11 @@ const Home = () => {
           Bubbles alternate up and down so they sit along the crest and trough
           of the scallop below, rather than in a flat line across it.
         */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 mt-4 pb-4">
+        <div className="relative flex gap-2 overflow-x-auto scrollbar-hide px-4 mt-4 pb-3">
           {loading
             ? Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="shrink-0 w-[60px]">
-                  <div className="w-[60px] h-[60px] rounded-full bg-white/10" />
+                <div key={index} className="shrink-0 w-[58px]">
+                  <div className="w-[56px] h-[56px] rounded-full bg-white/10" />
                 </div>
               ))
             : categories.map((category, index) => (
@@ -127,9 +156,9 @@ const Home = () => {
                   onClick={() => navigate(`/products?category=${category.slug}`)}
                   // The gentle stagger follows the scallop's crest and trough
                   // without pushing any label down into it.
-                  className={`shrink-0 w-[62px] text-center ${index % 2 === 1 ? 'pt-3' : ''}`}
+                  className={`shrink-0 w-[58px] text-center ${index % 2 === 1 ? 'pt-4' : ''}`}
                 >
-                  <span className="block w-[58px] h-[58px] mx-auto rounded-full bg-cream overflow-hidden ring-[3px] ring-white/10">
+                  <span className="block w-[56px] h-[56px] mx-auto rounded-full bg-cream overflow-hidden">
                     {category.image ? (
                       <img
                         src={category.image}
@@ -143,8 +172,8 @@ const Home = () => {
                       </span>
                     )}
                   </span>
-                  <span className="block mt-1.5 text-[10px] font-semibold text-white/80 leading-tight line-clamp-1">
-                    {category.name}
+                  <span className="block mt-1.5 text-[11px] font-semibold text-white/85 leading-tight">
+                    {shortLabel(category.name)}
                   </span>
                 </motion.button>
               ))}
@@ -166,11 +195,13 @@ const Home = () => {
         {loading ? (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="shrink-0 w-[158px] border border-line rounded-card p-2.5">
-                <Skeleton className="aspect-square rounded-xl mb-2" />
-                <Skeleton className="h-3.5 w-4/5 mb-1.5" />
-                <Skeleton className="h-5 w-1/2 mb-2.5" />
-                <Skeleton className="h-9 rounded-full" />
+              <div key={index} className="shrink-0 w-[158px] rounded-card shadow-card overflow-hidden">
+                <Skeleton className="aspect-square" />
+                <div className="px-3 pt-2.5 pb-3">
+                  <Skeleton className="h-3.5 w-4/5 mb-1.5" />
+                  <Skeleton className="h-5 w-1/2" />
+                </div>
+                <Skeleton className="h-11" />
               </div>
             ))}
           </div>
@@ -207,14 +238,54 @@ const Home = () => {
               transition={{ ...spring.snappy, delay: 0.1 + index * 0.06 }}
               whileTap={tap}
               onClick={() => navigate(promo.to)}
-              className={`text-left p-4 rounded-card ${promo.className}`}
+              className={`relative overflow-hidden text-left p-4 rounded-card ${promo.className}`}
             >
-              <p className="text-sm font-extrabold text-forest">{promo.title}</p>
-              <p className="text-[11px] text-forest/60 mt-0.5">{promo.sub}</p>
-              <p className="text-[11px] font-bold text-forest/80 mt-3">{promo.foot}</p>
+              {/*
+                The photo sits half off the tile's edge. Contained, it reads as
+                a thumbnail glued on; bled, the tile reads as a window onto the
+                aisle it opens.
+              */}
+              <img
+                src={promo.image}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                className="pointer-events-none absolute -right-4 -bottom-3 w-[86px] h-[86px] rounded-full object-cover mix-blend-multiply"
+              />
+
+              <div className="relative pr-12">
+                <p className="text-sm font-extrabold text-forest">{promo.title}</p>
+                <p className="text-[11px] text-forest/60 mt-0.5">{promo.sub}</p>
+                <p className="text-[11px] font-bold text-forest/80 mt-3">{promo.foot}</p>
+              </div>
             </motion.button>
           ))}
         </div>
+
+        {/*
+          Featured, as a two-column grid.
+          The rail above says "there is more sideways"; this says "there is more
+          down", which is the direction a customer browsing rather than
+          searching actually scrolls.
+        */}
+        {!loading && featuredGrid.length > 0 && (
+          <>
+            <div className="mt-8">
+              <SectionHead title="Featured" to="/products" cta="See all" />
+            </div>
+
+            <motion.div
+              variants={gridContainer}
+              initial="initial"
+              animate="animate"
+              className="grid grid-cols-2 gap-3 px-4"
+            >
+              {featuredGrid.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </motion.div>
+          </>
+        )}
 
         {/* Contact — a real shop, and customers do phone it */}
         <div className="px-4 mt-6">

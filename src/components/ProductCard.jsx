@@ -5,6 +5,7 @@ import { Plus, Minus } from 'lucide-react';
 import useCartStore from '../store/cartStore';
 import ProductDetailsModal from './ProductDetailsModal';
 import { spring, tap, gridItem } from '../lib/motion';
+import { scallopedCard, curvedCardShadow } from '../lib/curves';
 import { cx } from './ui';
 
 const CATEGORY_EMOJI = {
@@ -27,7 +28,7 @@ const Price = ({ paise, className }) => {
   const paisePart = paise % 100;
 
   return (
-    <span className={cx('font-extrabold text-ink tabular leading-none', className)}>
+    <span className={cx('font-extrabold text-forest dark:text-ink tabular leading-none', className)}>
       ₹{rupees}
       {paisePart > 0 && (
         <sup className="text-[0.65em] font-bold ml-px">
@@ -41,9 +42,10 @@ const Price = ({ paise, className }) => {
 /**
  * The add control at the foot of every card.
  *
- * A wide pill rather than a small circular button: it is the one thing on the
- * card a customer taps repeatedly, and it morphs in place into a − 1 + stepper
- * once the item is in the cart. `layout` on the shared pill makes that a single
+ * A band flush with the card's bottom edge rather than a small circular button:
+ * it is the one thing on the card a customer taps repeatedly, so it gets the
+ * full width and a thumb-sized height. It morphs in place into a − 1 + stepper
+ * once the item is in the cart; `layout` on the shared band makes that a single
  * continuous shape change rather than one element swapping for another.
  */
 const AddControl = ({ product, variant, disabled }) => {
@@ -65,7 +67,7 @@ const AddControl = ({ product, variant, disabled }) => {
 
   if (disabled) {
     return (
-      <div className="h-9 rounded-full bg-surface-sunken flex items-center justify-center text-xs font-semibold text-ink-faint">
+      <div className="mx-2.5 mb-5 h-11 rounded-2xl bg-surface-sunken flex items-center justify-center text-xs font-semibold text-ink-faint">
         Unavailable
       </div>
     );
@@ -75,7 +77,7 @@ const AddControl = ({ product, variant, disabled }) => {
     <motion.div
       layout
       transition={layoutTransition}
-      className="h-9 rounded-full bg-brand-50 dark:bg-brand-950/40 flex items-center justify-center overflow-hidden"
+      className="mx-2.5 mb-5 h-11 rounded-2xl bg-brand-50 dark:bg-brand-950/40 flex items-center justify-center overflow-hidden"
     >
       <AnimatePresence mode="popLayout" initial={false}>
         {quantity === 0 ? (
@@ -104,7 +106,7 @@ const AddControl = ({ product, variant, disabled }) => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.85 }}
             transition={layoutTransition}
-            className="w-full h-full flex items-center justify-between px-1"
+            className="w-full h-full flex items-center justify-between px-3"
           >
             <motion.button
               whileTap={tap}
@@ -163,18 +165,32 @@ const ProductCard = memo(({ product }) => {
 
   return (
     <>
-      <motion.article
+      {/*
+        The shadow lives on the wrapper as a drop-shadow, not on the card as a
+        box-shadow: the mask below erases box-shadow along with everything else
+        outside the shape, while drop-shadow follows the alpha channel and so
+        traces the curve.
+      */}
+      <motion.div
         variants={gridItem}
         whileTap={{ scale: 0.985 }}
         onClick={() => setSheetOpen(true)}
-        className="flex flex-col bg-surface-raised border border-line rounded-card p-2.5 cursor-pointer"
+        style={curvedCardShadow}
+        className="cursor-pointer"
       >
-        <div className="relative aspect-square rounded-xl bg-surface-sunken overflow-hidden mb-2">
+        <article
+          style={scallopedCard}
+          className="flex flex-col h-full bg-surface-raised rounded-t-card overflow-hidden"
+        >
+          <div className="relative aspect-square overflow-hidden">
           {product.images?.[0] ? (
             <img
               src={product.images[0]}
               alt={product.name}
               loading="lazy"
+              // The shop's photos are shot on near-white, not cut out, so they
+              // fill the frame: contained, each one shows its own off-white
+              // square against the card and reads as a pasted-in thumbnail.
               className="w-full h-full object-cover"
             />
           ) : (
@@ -184,33 +200,39 @@ const ProductCard = memo(({ product }) => {
           )}
 
           {hasDiscount && (
-            <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-coral text-white text-[10px] font-bold">
+            <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-coral text-white text-[10px] font-bold">
               {discountPercent}% off
             </span>
           )}
         </div>
 
-        <h3 className="text-[13px] font-semibold text-ink leading-tight line-clamp-2 min-h-[2.2em]">
-          {product.name}
-        </h3>
-        <p className="text-[11px] text-ink-faint mt-0.5 line-clamp-1">
-          {product.nameHindi || product.category?.name}
-        </p>
-        <p className="text-[11px] text-ink-faint mt-1">{variant?.label ?? '—'}</p>
+        {/*
+          Centred, like the reference: the photo is the widest thing on the
+          card, so a left-aligned column of short lines under it reads as
+          hanging off one edge.
+        */}
+          <div className="flex flex-col flex-1 items-center text-center px-2.5 pb-3">
+          <h3 className="text-[14px] font-bold text-forest dark:text-ink leading-snug line-clamp-2 min-h-[2.4em]">
+            {product.name}
+          </h3>
+          <p className="text-[11px] text-ink-faint mt-0.5 line-clamp-1">
+            {product.nameHindi || product.category?.name}
+          </p>
+          <p className="text-[12px] text-ink-faint mt-1">{variant?.label ?? '—'}</p>
 
-        <div className="flex items-baseline gap-1.5 mt-1.5 mb-2.5">
-          {canBuy ? <Price paise={variant.price} className="text-lg" /> : <span className="text-lg font-extrabold text-ink-faint">—</span>}
-          {hasDiscount && (
-            <span className="text-[11px] text-ink-faint line-through tabular">
-              ₹{Math.round(variant.mrp / 100)}
-            </span>
-          )}
+          <div className="flex items-baseline justify-center gap-1.5 mt-auto pt-2.5">
+            {canBuy ? <Price paise={variant.price} className="text-[22px]" /> : <span className="text-[22px] font-extrabold text-ink-faint">—</span>}
+            {hasDiscount && (
+              <span className="text-[11px] text-ink-faint line-through tabular">
+                ₹{Math.round(variant.mrp / 100)}
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="mt-auto">
           <AddControl product={product} variant={variant} disabled={!canBuy} />
-        </div>
-      </motion.article>
+        </article>
+      </motion.div>
 
       <ProductDetailsModal
         product={product}
