@@ -1,8 +1,7 @@
 {
-  "name": "react-tailwind-css-starter-pack",
+  "name": "timeless-baazar",
   "version": "0.1.0",
   "private": true,
-  "homepage": ".",
   "dependencies": {
     "clsx": "^2.1.1",
     "firebase": "^12.11.0",
@@ -13,44 +12,20 @@
     "react-hot-toast": "^2.6.0",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.13.0",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4",
     "zustand": "^5.0.10"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/thepranaygupta/react-tailwind-css-starter-pack.git"
-  },
-  "author": "Pranay Gupta",
-  "bugs": {
-    "url": "https://github.com/thepranaygupta/react-tailwind-css-starter-pack/issues"
-  },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
-    "tailwindcss": "^3.2.7"
-  }
+    "tailwindcss": "^3.4.19",
+    "vite": "^7.3.6"
+  },
+  "type": "module"
 }

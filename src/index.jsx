@@ -16,7 +16,7 @@ root.render(
 // Register service worker for PWA functionality
 // DEVELOPMENT: Disabled to avoid cache issues during development
 // PRODUCTION: Automatically enabled when deployed (see below)
-if (process.env.NODE_ENV === 'production') {
+if (import.meta.env.PROD) {
   serviceWorkerRegistration.register({
     onSuccess: () => {
       console.log('✅ App ready to work offline!');

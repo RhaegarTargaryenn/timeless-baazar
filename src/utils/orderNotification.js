@@ -4,11 +4,7 @@
 // Google Sheets Configuration
 // IMPORTANT: Update WEBAPP_URL after deploying Google Apps Script
 export const GOOGLE_SHEETS_CONFIG = {
-  // Replace this with your deployed Web App URL from Google Apps Script
-  WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbw3gM16AKlhHw--b_ObdmGRTv9qLoN3uFJ6HsJgFV2_ngmF_1Dixn_SJxa4KNgmSasL/exec',
-  
-  // Your Google Sheet ID (already set)
-  SHEET_ID: '1opXq7Nee7pA6U8W5DsOq_FiSDMSqRl0upphIarauH8I',
+  WEBAPP_URL: import.meta.env.VITE_SHEETS_WEBAPP_URL,
 };
 
 /**
