@@ -3,7 +3,7 @@
 Running log of the rebuild. **Read this first in a new session.**
 Update it at the end of every phase.
 
-Last updated: 2026-08-25
+Last updated: 2026-08-26
 
 ---
 
@@ -290,24 +290,298 @@ and names the single thing that looks most wrong.
 
 ---
 
+## Phase 5, second attempt — the reference changed  2026-08-26
+
+**The forest design is no longer the target.** The client supplied a Figma file
+instead of the screen recording:
+
+> https://www.figma.com/design/Gf926spsJxPbdHA5hkJIyc/Online-Groceries-App-UI--Community-?node-id=1-45
+
+That is the "Nectar / Online Groceries App UI" community file, and it is a
+different design language from what had been built: white throughout, one green
+accent, no dark header, no scalloped seam. Chasing the recording is over — the
+Figma is now the source of truth, and it can be read exactly (`get_design_context`)
+instead of guessed at from video frames. That removes all three reasons the
+previous attempt was slow.
+
+### Done — Home and the shared pieces
+
+Read from node `1:45` and adapted, not pasted.
+
+**Tokens retuned, names unchanged.** `brand-600` is now the design's `#53B175`,
+so every existing `bg-brand-600` in the app picked the new action colour up
+without being edited; the rest of the scale is derived around it. Semantic
+neutrals now hold the design's values -- ink `#181725`, muted `#7C7C7C`, line
+`#E2E2E2`, sunken `#F2F3F2`. `borderRadius.card` is 18px. **`body` is white
+now**, not `surface-sunken`; sunken is a fill (the search field, the category
+tints), not the page.
+
+**`src/components/icons/NectarIcons.jsx`** — the seven glyphs, exported from the
+file and inlined with their source viewBoxes. Inlined rather than `<img>`
+because the bottom bar recolours the active tab and an `<img>` cannot inherit
+`currentColor`. Only the baked-in fills were changed. **They are not all
+square** -- Explore is 28.35 x 18.21 and Cart 21.97 x 19.56 -- so each tab
+carries its own box; one shared `w-6 h-6` stretched two of them.
+
+**`Home.jsx`** — carrot mark and location, search field, promo banner, then
+Exclusive Offer / Best Selling / Groceries. The design's measurements: 25px
+gutter, 51.5px field at radius 15, 115px banner at radius 8, 24px titles against
+a 16px green "See all", 173px cards at a 15px gap. The three rails are derived
+from one catalogue (discounted first, then the rest, no repeats) because the API
+has no `featured` flag and nothing is curated yet.
+
+**`ProductCard.jsx`** — 173 x 248 at radius 18, a 1px `#E2E2E2` hairline, no
+fill, 15px inset, photo floating on white, then name / unit / price against a
+46px green add button. The add button is the design's `rect rx=17 fill #53B175`
+rebuilt in CSS rather than shipped as the exported SVG, because it has to morph
+into the − 1 + stepper.
+
+**`BottomNav.jsx`** — the floating forest pill is gone. It is the design's
+full-width white shelf now: 15px top radius, a wide soft upward shadow, 24px
+icons over 12px semibold labels, active tab simply recoloured green.
+
+**`public/design/`** — `logo-carrot.svg` and the two banner artworks, exported
+from the file. The icon SVGs were deleted after their paths were inlined, so
+nothing unused ships.
+
+### Icons: lucide only
+
+An early pass exported the Figma glyphs and inlined them as
+`src/components/icons/NectarIcons.jsx`. **That was the wrong call and it is
+gone.** lucide-react is already a dependency and has a clear match for every one
+of them. Do not download an icon from Figma again unless lucide genuinely has
+nothing like it. Artwork -- the carrot mark, the banner illustrations -- is a
+different matter and still comes from the file.
+
+Mapping in use: `Store` Shop, `LayoutGrid` Explore, `ShoppingCart` Cart,
+`Receipt` Orders, `Search`, `MapPin`, `ChevronLeft`, `SlidersHorizontal`,
+`ChevronDown`, `Heart`, `Minus`, `Plus`.
+
+### Product detail — node `1:682`
+
+`ProductDetailsModal.jsx` repainted to the design, and **full screen**, as the
+design draws it. It was first built as a bottom sheet; that squeezed the photo
+into a thumbnail and the whole thing read as a cramped popover. It is still an
+overlay rather than a route, so closing returns the customer to the exact grid
+position they came from, but it now fills the viewport. Portal, Escape and
+body-scroll lock survive; drag-to-close went with the sheet.
+
+Inside is the design's: a `#F2F3F2` photo panel with 25px bottom corners, a 24px
+bold title over a muted unit line, a −/46px-r17-counter/+ row weighed against a
+24px price, hairline disclosure rows, and a 67px brand button at radius 19.
+
+**The design's three rows are Product Detail, Nutritions and Review. Only the
+first survives.** The shop stores no nutrition figures and collects no reviews,
+so those rows would open onto nothing. **Sizes** takes a slot instead, because a
+product here really does have several -- it carries the variant picker, with the
+current label in the design's `#EBEBEB` chip.
+
+The photo panel is a snap rail with the design's pagination dots when a product
+has more than one image, and a single centred photo when it does not. Dots
+follow the rail's scroll rather than driving it, so a swipe and a dot tap cannot
+disagree.
+
+### Explore and the category grid — nodes `1:749` and `1:862`
+
+`Products.jsx` is now two screens on one route, chosen by the URL so the back
+arrow, a shared link and the browser's own back button all agree:
+
+- **No category and no query** -> "Find Products": centred title, the search
+  field, and a two-column grid of tinted category tiles, 189px at radius 18.
+- **Anything else** -> the category screen: back arrow, the category's name as
+  the title, a filter control, and a two-column grid of the same `ProductCard`
+  Home uses, 15px gutters.
+
+The forest header and its filter-chip rail are gone from this page.
+
+The tile colours live in **`src/lib/categoryTints.js`** -- the design's eight
+fill/border pairs, cycled. Home's category rail reads the same list, so the two
+screens can never disagree about which colour a category is.
+
+**The category images are the shop's own** (`public/category/*`), served through
+`category.image` as the API already returns them.
+
+### The category cut-outs
+
+The seeded category images were JPEGs of an illustration on a flat near-white
+field, which read as a grey box inside a coloured tile. `mix-blend-multiply`
+did not reliably hide it. They are now **keyed to transparency for real**:
+`public/category/*.png`, generated by flood-filling inward from the corners so
+enclosed light areas inside the illustration stay opaque.
+`server/src/scripts/useCategoryCutouts.js` points the stored paths at the PNGs
+and is idempotent.
+
+**The same trick does not work on the 71 product photos, and was tried.** Those
+are bowls photographed on light grey, and the bowl itself is white and connected
+to the background through its rim -- the flood eats the bowl, and at a higher
+tolerance the grains too. Cut-out product photography stays a client task.
+
+### Cart — node `1:1015`
+
+`Cart.jsx` rebuilt as the design's list: a centred title over a full-bleed
+hairline, then one row per line -- photo left, name with a dismiss X opposite,
+unit beneath, and a counter (two 46px r17 bordered boxes around the number)
+weighed against the line total. Rows are separated by an inset hairline rather
+than drawn as cards; the design reads as a list, not a stack of tiles.
+
+The button is the design's: full width, 67px at radius 19, with the total riding
+inside it as a darker `#489E67` chip. It is `sticky` rather than pinned so a
+long cart keeps it reachable, and it clears the bottom nav.
+
+**"Clear all" is gone** -- every row now carries its own X, and the old one
+opened a `window.confirm`.
+
+### Order accepted — node `1:1820`
+
+`src/components/OrderAccepted.jsx`, rendered by Checkout's success state. It
+replaces a dark-forest success screen that no longer belonged to anything.
+
+**Nothing was downloaded for it.** The design's backdrop is a photograph under a
+45px blur; it is drawn here as five overlapping radial gradients -- same effect,
+no 300 kB image, and it follows the theme. The tick and confetti are authored
+too: a disc with an inner hairline ring, lucide's `Check`, seven dots and three
+stroked curves, all animated in on a stagger.
+
+The order number is **added, not in the design**: the shop reads orders off the
+Google Sheet by number and customers ring up quoting it, so it has to be on
+screen.
+
+**Checkout now hides the bottom nav** (`NO_NAV` in `App.jsx`). It is a focused
+flow, and on this screen the nav sat directly on top of "Back to home".
+
+### Account — node `1:1258`
+
+A screen this app did not have. `src/pages/Account.jsx` at **`/account`**, behind
+`ProtectedRoute`, plus **`/account/addresses`**. The bottom bar is five tabs now:
+Shop, Explore, Cart, Orders, Account. The design's fifth is Favourite; this app
+has no favourites, so Orders keeps that slot and every tab still goes somewhere
+real.
+
+Identity block over a full-bleed hairline, then 18px rows with a 24px glyph and
+a chevron, grouped by hairlines, and the design's `#F2F3F2` 67px pill for Log
+Out. Google accounts supply `photoURL`; email signups fall back to initials on a
+gradient.
+
+**The design's row list is not reproduced verbatim, on purpose:**
+
+| Design row | What happened |
+|---|---|
+| Orders | -> `/track-order` |
+| My Details | Expands in place: name, email, verified state, read-only |
+| Delivery Address | -> `/account/addresses` |
+| Payment Methods | Expands: cash on delivery, nothing to save |
+| Promo Cord | **Dropped.** Coupons are only validated at checkout; the API has no per-customer coupon list |
+| Notifecations | **Dropped.** This app sends none |
+| Help | Expands: the shop's two numbers as `tel:` links |
+| About | Expands: what the shop is, and that prices are recomputed at order time |
+| — | **Added: Admin panel**, `isAdmin` only. A real destination the owner needs |
+
+Rows that lead to another screen get a right chevron; rows short enough to sit
+here expand, with a chevron that rotates.
+
+`/account/addresses` is only a header around **`AddressManager`**, the same
+component Checkout uses -- one component means an address edited here and one
+picked at checkout can never drift apart.
+
+### Known gaps
+
+- Product photos still carry their own light-grey field, so each one reads as a
+  faint rectangle inside a card and against the detail screen's panel.
+- Opening a disclosure row does not scroll it into view, so on a short screen
+  the expanded Sizes pills can sit just below the fold.
+- **Converted:** Home, Explore, the category grid, product detail, Cart, the
+  order-accepted screen and Account. **Still on the forest header:** Checkout's
+  own steps, Orders, Login, Signup. Products, Cart, Checkout, Orders, Login and Signup
+  still render `ForestHeader` and `ScallopedSeam`, so they are dark green while
+  Home is white. They pick up the new palette and the new `ProductCard` and
+  `BottomNav`, but the header treatment clashes. **This is the next job.**
+  `ForestHeader.jsx` and `ScallopedSeam.jsx` become dead once they are done.
+- The design draws five tabs (Shop, Explore, Cart, Favourite, Account). This app
+  has four destinations and no favourites or profile screen, so the two that
+  would dead-end were left out. Orders borrows the Favourite bookmark glyph --
+  there is no orders icon in the source.
+- **The photos still fight the layout.** The design uses cut-outs on transparent
+  backgrounds; the shop's photos are bowls on a light grey field, so each one
+  reads as a grey tile inside the card. Rounding the image box hides the hard
+  edge, but the real fix is cut-out product photos, which is a client task.
+- Banner copy is ours ("Everyday grocery"), not the source's "Fresh Vegetables /
+  40% OFF" -- the shop sells daal, rice and spices and runs no such offer. The
+  pagination dots are decorative; there is one promo.
+- `mrp` is null on every seeded variant, so no discount badge renders anywhere
+  and "Exclusive Offer" is currently just the head of the catalogue.
+
+### Worth knowing for next time
+
+`node --watch src/index.js` crash-loops silently on this machine when started
+detached -- it prints `Restarting` forever and never binds :4000. Plain
+`node src/index.js` is fine. Use that when the API is needed in the background.
+
+The browser tool's `resize_window` did not take, so screenshots kept coming back
+at desktop width and the phone layout was being judged at ~1225px. The reliable
+trick is a throwaway `public/__phone.html` holding a 414px-wide iframe of `/` --
+Vite serves it, the viewport is exact regardless of the window, and it deletes
+cleanly afterwards. `file://` URLs are refused by the tool.
+
+---
+
+## Repo split into frontend/ and backend/  2026-08-26
+
+The frontend used to sit at the repo root with the API tucked into `server/`,
+so "the project" and "the storefront" shared a package.json, a node_modules and
+a .env. That is now two peer folders:
+
+```
+frontend/   was the root -- src, public, index.html, the Vite/Tailwind/PostCSS
+            configs, package.json, .env
+backend/    was server/ -- unchanged inside
+```
+
+Nothing moved *within* either folder, so no import path in `src` changed and no
+`backend/src` require changed. Both were verified after the move: the frontend
+builds, and the API still connects to Atlas and listens on :4000.
+
+What had to follow the move:
+
+- `netlify.toml` gained `base = "frontend"`. Without it Netlify looks for a
+  package.json at the root and finds none. `publish = "build"` is resolved
+  relative to `base`, so it stays as it was.
+- The root `.gitignore` lost its leading slashes -- `/node_modules` and `/build`
+  only ever matched the root. They are now `node_modules/` and
+  `frontend/build/`. The separate `server/node_modules` line is gone;
+  `backend/` keeps its own .gitignore.
+- The stray `*firebase-adminsdk*.json` at the root moved into `backend/`. It is
+  a backup only -- the service account the API actually uses is inlined in
+  `FIREBASE_SERVICE_ACCOUNT` in `backend/.env`, not read from a file.
+
+**There is deliberately no package.json at the repo root.** A root package.json
+would make `npm install` at the root plausible-looking and wrong, and would give
+Netlify a second one to get confused by. Every npm command runs inside
+`frontend/` or `backend/`.
+
+Older entries below still say `server/` and bare `src/`. They are the record of
+what happened at the time; read them as `backend/` and `frontend/src/`.
+
+---
+
 ## Resume here
 
 Running locally needs both:
 
 ```bash
-npm run dev                  # storefront
-cd server && npm run dev     # API on :4000 -- without it the shop is empty
+cd frontend && npm run dev   # storefront
+cd backend  && npm run dev   # API on :4000 -- without it the shop is empty
 ```
 
 **Still to do:**
 
-1. **Finish the visual match** on Phase 5, screen by screen, against the
-   recording.
+1. **Convert the remaining screens to the Figma design** — Products, Cart,
+   Checkout, Orders, Login, Signup. Home and the shared components are done;
+   these still wear the forest header and clash with it.
 2. **Cloudinary image upload.** The admin form takes an image *path* today, so
    the client cannot add a product photographed on their phone. This is the last
    gap stopping the panel from being genuinely self-serve.
 3. **Deploy the API to Render** plus a keep-alive cron every 14 minutes. Render
-   gets the `mongodb+srv://` string kept as a comment in `server/.env`, **not**
+   gets the `mongodb+srv://` string kept as a comment in `backend/.env`, **not**
    the expanded one this machine needs. Then set `VITE_API_URL` on Netlify.
 4. **Hand over to the client** — their UID into `ADMIN_UIDS`, and a short guide.
 
@@ -317,8 +591,9 @@ Smaller, still outstanding:
   want it once real orders arrive.
 - Bulk price update — the most direct cure for the original "iska price bada
   do" problem, and not built.
-- `src/data/products.js` is dead except as the seed's source. Leave it.
-- `src/utils/helpers.js` and `orderNotification.js` are largely unused now.
+- `frontend/src/data/products.js` is dead except as the seed's source. Leave it.
+- `frontend/src/utils/helpers.js` and `orderNotification.js` are largely unused
+  now.
 
 ---
 
@@ -332,9 +607,19 @@ Smaller, still outstanding:
 
 ## How to run
 
+Two packages, two installs. There is no package.json at the repo root.
+
 ```bash
+cd frontend
 npm install
 cp .env.example .env    # fill in Firebase + Sheets values
 npm run dev             # http://localhost:3000
-npm run build           # → build/
+npm run build           # → frontend/build/
+```
+
+```bash
+cd backend
+npm install
+cp .env.example .env    # Mongo URI, Firebase service account, ADMIN_UIDS
+npm run dev             # API on :4000
 ```

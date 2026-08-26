@@ -12,7 +12,7 @@ const required = (name) => {
   if (!value) {
     throw new Error(
       `Missing required environment variable: ${name}. ` +
-        'Copy server/.env.example to server/.env and fill it in.'
+        'Copy backend/.env.example to backend/.env and fill it in.'
     );
   }
   return value;

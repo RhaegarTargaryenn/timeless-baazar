@@ -12,14 +12,19 @@
  * stop caring which theme is active.
  */
 @layer base {
+  /*
+   * Light values come from the Figma source (Online Groceries App UI):
+   * ink #181725, muted #7C7C7C, line #E2E2E2, sunken #F2F3F2 -- the grey the
+   * search field and the tinted category tiles are built on.
+   */
   :root {
     --surface: 255 255 255;
     --surface-raised: 255 255 255;
-    --surface-sunken: 247 248 250;
-    --line: 235 237 240;
-    --ink: 17 24 32;
-    --ink-muted: 100 110 124;
-    --ink-faint: 152 162 176;
+    --surface-sunken: 242 243 242;
+    --line: 226 226 226;
+    --ink: 24 23 37;
+    --ink-muted: 124 124 124;
+    --ink-faint: 177 177 177;
   }
 
   .dark {
@@ -38,7 +43,8 @@
 
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    @apply bg-surface-sunken text-ink antialiased;
+    /* The storefront sits on white; `surface-sunken` is a fill, not the page. */
+    @apply bg-surface text-ink antialiased;
     /* The bottom nav is fixed; without this, the last row sits under it. */
     padding-bottom: env(safe-area-inset-bottom);
   }

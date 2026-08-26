@@ -9,12 +9,28 @@ deployed to Netlify.
 rebuild: why we are doing it, decisions already settled, which phase we are on,
 and what is deliberately left undone. Start every session there.
 
+## Layout
+
+The repo is two independent npm packages. There is **no package.json at the
+root** — every npm command runs inside one of these folders.
+
+```
+frontend/   React + Vite storefront and /admin panel. Netlify builds this
+            (netlify.toml sets base = "frontend").
+backend/    Express API on :4000, MongoDB Atlas. Deploys to Render.
+docs/       PROJECT_LOG.md and the rest.
+```
+
 ## Commands
 
 ```bash
-npm run dev      # Vite dev server, http://localhost:3000
-npm run build    # → build/  (outDir is "build", not "dist", so netlify.toml matches)
-npm run preview  # serve the production build
+cd frontend && npm run dev      # Vite dev server, http://localhost:3000
+cd frontend && npm run build    # → frontend/build/  (outDir is "build", not
+                                #   "dist", so netlify.toml matches)
+cd frontend && npm run preview  # serve the production build
+
+cd backend && npm run dev       # API on :4000
+cd backend && npm run seed      # reseed products
 ```
 
 ## Conventions
@@ -33,15 +49,19 @@ npm run preview  # serve the production build
 ## Current state
 
 Phases 0-4 are done. The storefront and the admin panel at `/admin` both run off
-the Express API in `server/`, backed by MongoDB Atlas. **Firestore is gone** --
+the Express API in `backend/`, backed by MongoDB Atlas. **Firestore is gone** --
 Firebase is Auth only.
 
-Phase 5 (the mobile-first UI rebuild) is **in progress**: design tokens, the
-forest layout and the motion system are in place across every screen, but the
-visual match against the reference recording is not finished. See
-`docs/PROJECT_LOG.md` for what is left and why it has been slow.
+Phase 5 (the mobile-first UI rebuild) is **in progress**, and the reference
+changed on 2026-08-26: it is now a Figma file, not the screen recording --
+`Gf926spsJxPbdHA5hkJIyc`, node `1:45`. White throughout, one green accent, no
+dark header. Home, Explore, the category grid, product detail, Cart, the
+order-accepted screen, Account and the shared components are converted.
+Checkout's own steps, Orders, Login and Signup still render the old forest
+header and clash. See `docs/PROJECT_LOG.md`.
 
-Running locally needs both: `npm run dev` here, and `cd server && npm run dev`.
+Running locally needs both: `cd frontend && npm run dev`, and
+`cd backend && npm run dev`.
 Without the API the shop renders empty.
 
 ## Conventions that are easy to trip over
@@ -65,3 +85,11 @@ Without the API the shop renders empty.
   defaults fire for absent keys and the update wipes fields the caller never
   mentioned -- this silently erased product photos once already.
 - A CSS `mask` erases `box-shadow` too. Use `filter: drop-shadow` on a wrapper.
+- **Icons come from lucide-react, not Figma.** Exporting glyphs from the design
+  file was tried and reverted -- lucide matches every one. Artwork (the carrot
+  mark, the banner) still comes from the file.
+- Category tile colours come from `src/lib/categoryTints.js`, shared by Home and
+  Explore. Do not hardcode a tint in either.
+- `ForestHeader` and `ScallopedSeam` belong to the abandoned design. Do not
+  reach for them on a screen you are converting -- delete them once the last
+  screen is off them.

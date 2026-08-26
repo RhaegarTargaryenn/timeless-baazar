@@ -99,6 +99,9 @@ Timeless Baazar is a full-featured grocery e-commerce website built with React a
 
 ```
 timeless-baazar/
+├── backend/              # Express API (:4000) -- its own package.json
+│   └── src/
+└── frontend/             # everything below lives inside frontend/
 ├── public/
 │   ├── index.html
 │   ├── favicon.ico
@@ -129,9 +132,11 @@ timeless-baazar/
 │   ├── index.js
 │   └── index.css
 ├── package.json
-├── tailwind.config.js
-└── README.md
+└── tailwind.config.js
 ```
+
+There is no package.json at the repo root — `frontend/` and `backend/` are two
+separate npm packages, each installed and run on its own.
 
 ---
 
@@ -144,6 +149,7 @@ timeless-baazar/
 ### Step 1: Install Core Dependencies (Already Done ✅)
 
 ```bash
+cd frontend
 npm install
 ```
 
@@ -156,7 +162,8 @@ npm install react-router-dom framer-motion react-hot-toast react-icons clsx
 ### Step 3: Run Development Server
 
 ```bash
-npm start
+cd frontend && npm run dev   # http://localhost:3000
+cd backend  && npm run dev   # API on :4000 -- without it the shop renders empty
 ```
 
 The app will open at `http://localhost:3000`
@@ -164,7 +171,7 @@ The app will open at `http://localhost:3000`
 ### Step 4: Build for Production
 
 ```bash
-npm run build
+cd frontend && npm run build   # → frontend/build/
 ```
 
 ---
@@ -312,5 +319,6 @@ Proprietary and confidential - Built for Timeless Baazar
 
 ---
 
-**Let's build something amazing! 🚀**#   t i m e l e s s - b a a z a r  
+**Let's build something amazing! 🚀**#   t i m e l e s s - b a a z a r 
+ 
  

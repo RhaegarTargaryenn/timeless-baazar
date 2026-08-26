@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ArrowRight, Tag, X, MapPin, Wallet, PartyPopper } from 'lucide-react';
+import { Check, ArrowRight, Tag, X, MapPin, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +11,7 @@ import { api, formatRupees } from '../lib/api';
 import AddressManager from '../components/AddressManager';
 import PaymentMethod from '../components/PaymentMethod';
 import ForestHeader, { Sheet } from '../components/ForestHeader';
+import OrderAccepted from '../components/OrderAccepted';
 import { Price } from '../components/ProductCard';
 import { pageIn, spring, tap, EASE } from '../lib/motion';
 import { cx } from '../components/ui';
@@ -130,78 +131,14 @@ const Checkout = () => {
   // stopped here rather than at login — see VerifyEmailGate for why.
   if (!isVerified) return <VerifyEmailGate />;
 
-  // ── Success ──────────────────────────────────────────────────────────────
+  // ── Success ─────────────────────────────────────────────────────────────
   if (orderNumber) {
     return (
-      <motion.div {...pageIn} className="min-h-screen bg-forest">
-        <div className="max-w-md mx-auto px-5 pt-16 pb-10 text-center">
-          <motion.div
-            initial={{ scale: 0, rotate: -20 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ ...spring.sheet, delay: 0.1 }}
-            className="w-20 h-20 rounded-full bg-brand-500 mx-auto flex items-center justify-center"
-          >
-            <PartyPopper className="w-9 h-9 text-white" />
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.4, ease: EASE }}
-            className="text-2xl font-extrabold text-white mt-6"
-          >
-            Order placed
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.35 }}
-            className="text-sm text-white/60 mt-1.5"
-          >
-            We'll call to confirm before delivery.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, ...spring.sheet }}
-            className="mt-8 rounded-card bg-surface p-5 text-left"
-          >
-            <p className="text-xs text-ink-muted">Order number</p>
-            <p className="text-2xl font-extrabold text-ink tracking-wide font-mono mt-0.5">
-              {orderNumber}
-            </p>
-
-            <div className="h-px bg-line my-4" />
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-ink-muted">Total</span>
-              <Price paise={total} className="text-lg" />
-            </div>
-            <div className="flex items-center justify-between mt-1.5">
-              <span className="text-sm text-ink-muted">Payment</span>
-              <span className="text-sm font-semibold text-ink">Cash on delivery</span>
-            </div>
-          </motion.div>
-
-          <div className="flex flex-col gap-2.5 mt-6">
-            <motion.button
-              whileTap={tap}
-              onClick={() => navigate('/track-order')}
-              className="h-13 py-3.5 rounded-full bg-brand-600 text-white font-bold"
-            >
-              Track this order
-            </motion.button>
-            <motion.button
-              whileTap={tap}
-              onClick={() => navigate('/products')}
-              className="py-3.5 rounded-full bg-white/10 text-white font-semibold"
-            >
-              Keep shopping
-            </motion.button>
-          </div>
-        </div>
-      </motion.div>
+      <OrderAccepted
+        orderNumber={orderNumber}
+        onTrack={() => navigate('/track-order')}
+        onHome={() => navigate('/')}
+      />
     );
   }
 

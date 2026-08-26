@@ -17,18 +17,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Brand green. 600 is the action colour; 500 is for gradients.
+        /**
+         * Brand green. 600 is the action colour; 500 is for gradients.
+         *
+         * 600 is the Nectar green `#53B175` from the Figma source, so every
+         * existing `bg-brand-600` picks the design's action colour up without
+         * being touched. The rest of the scale is derived around it.
+         */
         brand: {
-          50: '#F0FDF4',
-          100: '#DCFCE7',
-          200: '#BBF7D0',
-          300: '#86EFAC',
-          400: '#4ADE80',
-          500: '#22C55E',
-          600: '#16A34A',
-          700: '#15803D',
-          800: '#166534',
-          900: '#14532D',
+          50: '#F3FAF6',
+          100: '#E3F4EA',
+          200: '#C7E9D5',
+          300: '#9DD8B7',
+          400: '#74C495',
+          500: '#5FBA83',
+          600: '#53B175',
+          700: '#45945F',
+          800: '#38754C',
+          900: '#2C5B3C',
         },
 
         /**
@@ -64,7 +70,8 @@ export default {
 
       // A grocery app reads as friendly through roundness more than colour.
       borderRadius: {
-        card: '1.25rem',
+        // 18px -- the radius every card, tile and banner in the design uses.
+        card: '1.125rem',
         sheet: '1.75rem',
         // The seam where white content meets the forest header.
         seam: '2rem',
@@ -76,9 +83,11 @@ export default {
         sheet: '0 -8px 40px -12px rgb(16 24 40 / 0.22)',
         // Buttons carry a tinted shadow so the primary action reads as raised
         // rather than merely coloured.
-        brand: '0 4px 14px -4px rgb(22 163 74 / 0.45)',
+        brand: '0 4px 14px -4px rgb(83 177 117 / 0.45)',
         // The floating nav pill needs to read as hovering over the page.
         float: '0 8px 30px -6px rgb(13 59 44 / 0.35)',
+        // The bottom bar: a white shelf lifting off the page.
+        shelf: '0 -12px 37px 0 rgb(230 235 243 / 0.5)',
       },
 
       // Bottom nav and sheets have to clear the iOS home indicator.

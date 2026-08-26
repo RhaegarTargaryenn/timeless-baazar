@@ -17,6 +17,8 @@ const Checkout = lazy(() => import('./pages/Checkout'));
 const OrderTracking = lazy(() => import('./pages/OrderTracking'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
+const Account = lazy(() => import('./pages/Account'));
+const AccountAddresses = lazy(() => import('./pages/AccountAddresses'));
 
 // The admin panel ships as its own chunk: customers never download it, and it
 // lives in this app rather than a separate one so the API client, auth and
@@ -43,18 +45,36 @@ const PageLoader = () => (
  * Home and the shop paint their own dark header, so the shared light one would
  * stack a second bar on top of it. Everything else still needs it.
  */
-const OWN_HEADER = ['/', '/products', '/cart', '/checkout', '/track-order'];
+const OWN_HEADER = [
+  '/',
+  '/products',
+  '/cart',
+  '/checkout',
+  '/track-order',
+  '/account',
+  '/account/addresses',
+];
+
+/**
+ * Checkout hides the bottom nav.
+ *
+ * It is a focused flow -- offering a way to wander off mid-payment is wrong on
+ * its own, and on the order-accepted screen the nav sits right on top of the
+ * "Back to home" button.
+ */
+const NO_NAV = ['/checkout'];
 
 const StorefrontShell = ({ children }) => {
   const { pathname } = useLocation();
   const ownHeader = OWN_HEADER.includes(pathname);
+  const showNav = !NO_NAV.includes(pathname);
 
   return (
     <div className="flex flex-col min-h-screen">
       {!ownHeader && <Header />}
       {/* pb keeps the last row clear of the floating nav on phones */}
       <main className={ownHeader ? 'flex-grow' : 'flex-grow pb-28 sm:pb-0'}>{children}</main>
-      <BottomNav />
+      {showNav && <BottomNav />}
       <PWAInstallPrompt />
     </div>
   );
@@ -79,6 +99,22 @@ const StorefrontRoutes = () => (
         element={
           <ProtectedRoute>
             <OrderTracking />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/account"
+        element={
+          <ProtectedRoute>
+            <Account />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/account/addresses"
+        element={
+          <ProtectedRoute>
+            <AccountAddresses />
           </ProtectedRoute>
         }
       />

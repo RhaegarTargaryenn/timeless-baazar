@@ -1,9 +1,13 @@
 # Netlify configuration for Timeless Baazar PWA
 
 [build]
+  # The frontend lives in its own folder, so Netlify has to cd there before it
+  # sees package.json. `publish` is resolved relative to `base`.
+  base = "frontend"
+
   # Build command
   command = "npm run build"
-  
+
   # Directory to deploy
   publish = "build"
   
