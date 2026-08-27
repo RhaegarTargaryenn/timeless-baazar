@@ -11,9 +11,11 @@
   # Directory to deploy
   publish = "build"
   
-  # Environment variables
+  # Vite 7 requires ^20.19.0 || >=22.12.0. This said 18 until 2026-08-28 --
+  # a leftover from before the Phase 0 move off Create React App, which would
+  # have failed the build on an engine check.
   [build.environment]
-    NODE_VERSION = "18"
+    NODE_VERSION = "22"
 
 # Redirect rules for React Router (SPA)
 [[redirects]]
@@ -21,9 +23,11 @@
   to = "/index.html"
   status = 200
 
-# Headers for static assets
+# Hashed bundles, so they can be cached forever. Vite emits these into
+# assets/; the path said static/ until 2026-08-28, which is where CRA put them
+# -- the rule matched nothing and the real bundles went uncached.
 [[headers]]
-  for = "/static/*"
+  for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
