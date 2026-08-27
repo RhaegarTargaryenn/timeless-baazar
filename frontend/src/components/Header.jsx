@@ -8,10 +8,16 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { IconButton, Button, cx } from './ui';
 
+/**
+ * The desktop counterpart of BottomNav's five tabs. Cart is missing on purpose
+ * -- it already sits in the action row as an icon with the item badge. `auth`
+ * links go nowhere but the login screen when signed out, so they stay hidden.
+ */
 const DESKTOP_LINKS = [
   { to: '/', label: 'Home', end: true },
   { to: '/products', label: 'Shop' },
-  { to: '/track-order', label: 'Orders' },
+  { to: '/track-order', label: 'Orders', auth: true },
+  { to: '/account', label: 'Account', auth: true },
 ];
 
 /**
@@ -21,8 +27,13 @@ const DESKTOP_LINKS = [
  * BottomNav carries navigation. The old header packed logo, search, install
  * prompt, cart and a hamburger containing everything else into 72px, and the
  * menu hid the links customers actually needed.
+ *
+ * `className` exists for the screens that paint their own header on a phone.
+ * BottomNav is hidden from `sm` up, so those screens still need this bar on a
+ * desktop or there is no navigation at all — they pass `hidden sm:block`
+ * rather than dropping the header outright.
  */
-const Header = () => {
+const Header = ({ className }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
@@ -47,7 +58,12 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-surface-raised/90 backdrop-blur border-b border-line">
+    <header
+      className={cx(
+        'sticky top-0 z-40 bg-surface-raised/90 backdrop-blur border-b border-line',
+        className
+      )}
+    >
       <div className="max-w-5xl mx-auto px-4">
         <div className="h-14 flex items-center gap-3">
           {/*
@@ -65,7 +81,7 @@ const Header = () => {
           </Link>
 
           <nav className="hidden sm:flex items-center gap-1 ml-4">
-            {DESKTOP_LINKS.map(({ to, label, end }) => (
+            {DESKTOP_LINKS.filter(({ auth }) => !auth || user).map(({ to, label, end }) => (
               <NavLink
                 key={to}
                 to={to}

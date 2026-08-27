@@ -8,6 +8,7 @@ import AdminRoute from './components/AdminRoute';
 import Header from './components/Header';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import BottomNav from './components/BottomNav';
+import { cx } from './components/ui';
 import './App.css';
 
 const Home = lazy(() => import('./pages/Home'));
@@ -42,8 +43,10 @@ const PageLoader = () => (
  * on a phone.
  */
 /**
- * Home and the shop paint their own dark header, so the shared light one would
- * stack a second bar on top of it. Everything else still needs it.
+ * These screens paint their own header, so the shared one would stack a second
+ * bar on top of it -- on a phone. From `sm` up BottomNav is gone, so the shared
+ * header is the only navigation there and has to render on every screen; these
+ * paths just hide it below `sm`.
  */
 const OWN_HEADER = [
   '/',
@@ -71,9 +74,21 @@ const StorefrontShell = ({ children }) => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {!ownHeader && <Header />}
-      {/* pb keeps the last row clear of the floating nav on phones */}
-      <main className={ownHeader ? 'flex-grow' : 'flex-grow pb-28 sm:pb-0'}>{children}</main>
+      <Header className={ownHeader ? 'hidden sm:block' : undefined} />
+      {/*
+        The screens are drawn for a 375px phone. Left to run full width they
+        stretch a 51px search field across a 27" monitor, so the column is
+        capped at the header's own width and centred; `pb` keeps the last row
+        clear of the floating nav on phones.
+      */}
+      <main
+        className={cx(
+          'flex-grow w-full max-w-5xl mx-auto',
+          !ownHeader && 'pb-28 sm:pb-0'
+        )}
+      >
+        {children}
+      </main>
       {showNav && <BottomNav />}
       <PWAInstallPrompt />
     </div>

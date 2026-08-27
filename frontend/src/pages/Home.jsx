@@ -47,17 +47,37 @@ const SectionHead = ({ title, to }) => (
 /**
  * A horizontal rail of product cards.
  *
- * A rail rather than a grid, as in the design: it shows the catalogue carries
- * on past the edge of the screen, which a grid cut off at four items does not.
+ * A rail rather than a grid on a phone, as in the design: it shows the
+ * catalogue carries on past the edge of the screen, which a grid cut off at
+ * four items does not. That argument is about a 375px viewport -- from `sm` up
+ * the same eight cards fit on screen, so the rail unrolls into a grid rather
+ * than making a desktop customer drag a scrollbar sideways.
  */
-const ProductRail = ({ products, loading }) => {
+const RAIL = 'flex gap-[15px] overflow-x-auto scrollbar-hide snap-row px-[25px]';
+const RAIL_GRID = 'sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-5 sm:overflow-visible';
+
+/**
+ * The closing section is a grid on every width.
+ *
+ * Three sideways rails in a row is a lot of dragging for one screen; the last
+ * one is the "everything else" list rather than a curated pick, so it reads
+ * better laid out flat -- and it gives the page a proper end instead of a
+ * fourth edge that runs off screen.
+ */
+const GRID = 'grid grid-cols-2 gap-[15px] px-[25px] sm:grid-cols-3 lg:grid-cols-4 sm:gap-5';
+
+/** Rail by default; `flat` lays the same cards out as a grid at every width. */
+const ProductRail = ({ products, loading, flat }) => {
+  const layout = flat ? GRID : cx(RAIL, RAIL_GRID);
+  const width = flat ? 'w-auto' : 'shrink-0 w-[173px] sm:w-auto';
+
   if (loading) {
     return (
-      <div className="flex gap-[15px] overflow-x-auto scrollbar-hide px-[25px] pt-[15px] pb-1">
-        {Array.from({ length: 3 }).map((_, index) => (
+      <div className={cx(layout, 'pt-[15px] pb-1')}>
+        {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
-            className="shrink-0 w-[173px] h-[248px] p-[15px] border border-line rounded-card"
+            className={cx(width, 'h-[248px] p-[15px] border border-line rounded-card')}
           >
             <Skeleton className="h-[100px] rounded-xl" />
             <Skeleton className="h-4 w-4/5 mt-3" />
@@ -74,10 +94,10 @@ const ProductRail = ({ products, loading }) => {
       variants={gridContainer}
       initial="initial"
       animate="animate"
-      className="flex gap-[15px] overflow-x-auto scrollbar-hide snap-row px-[25px] pt-[15px] pb-1"
+      className={cx(layout, 'pt-[15px] pb-1')}
     >
       {products.map((product) => (
-        <div key={product._id} className="shrink-0 w-[173px]">
+        <div key={product._id} className={width}>
           <ProductCard product={product} />
         </div>
       ))}
@@ -198,10 +218,10 @@ const Home = () => {
       <section className="mt-7">
         <SectionHead title="Groceries" to="/products" />
 
-        <div className="flex gap-[15px] overflow-x-auto scrollbar-hide snap-row px-[25px] pt-[15px]">
+        <div className={cx(RAIL, 'sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-5 sm:overflow-visible', 'pt-[15px]')}>
           {loading
-            ? Array.from({ length: 2 }).map((_, index) => (
-                <Skeleton key={index} className="shrink-0 w-[248px] h-[105px] rounded-card" />
+            ? Array.from({ length: 3 }).map((_, index) => (
+                <Skeleton key={index} className="shrink-0 w-[248px] sm:w-auto h-[105px] rounded-card" />
               ))
             : categories.map((category, index) => (
                 <motion.button
@@ -211,7 +231,7 @@ const Home = () => {
                   transition={{ ...spring.snappy, delay: index * 0.05 }}
                   whileTap={tap}
                   onClick={() => navigate(`/products?category=${category.slug}`)}
-                  className="relative shrink-0 w-[248px] h-[105px] rounded-card flex items-center gap-4 pl-[17px] pr-5 overflow-hidden"
+                  className="relative shrink-0 w-[248px] sm:w-auto h-[105px] rounded-card flex items-center gap-4 pl-[17px] pr-5 overflow-hidden"
                 >
                   {/*
                     The tint is a 15% wash of a solid hue, exactly as the design
@@ -246,7 +266,7 @@ const Home = () => {
               ))}
         </div>
 
-        <ProductRail products={groceries} loading={loading} />
+        <ProductRail products={groceries} loading={loading} flat />
       </section>
 
       {/* ── Contact — a real shop, and customers do phone it ──────────────── */}
