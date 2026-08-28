@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { motion } from 'framer-motion';
-import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiArrowLeft } from 'react-icons/hi';
+import { Mail, LockClosed, Eye, EyeOff, ArrowLeft } from '../components/icons';
 import { FcGoogle } from 'react-icons/fc';
 import toast from 'react-hot-toast';
 
@@ -159,7 +159,7 @@ const Login = () => {
                       Email
                     </label>
                     <div className="relative">
-                      <HiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint w-4 h-4" />
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint w-4 h-4" />
                       <input
                         type="email"
                         value={emailForm.email}
@@ -186,7 +186,7 @@ const Login = () => {
                       </button>
                     </div>
                     <div className="relative">
-                      <HiLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint w-4 h-4" />
+                      <LockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint w-4 h-4" />
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={emailForm.password}
@@ -201,7 +201,7 @@ const Login = () => {
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-faint"
                       >
-                        {showPassword ? <HiEyeOff className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
@@ -244,7 +244,7 @@ const Login = () => {
             to="/"
             className="text-sm text-white/50 hover:text-white flex items-center justify-center gap-1"
           >
-            <HiArrowLeft className="w-3.5 h-3.5" /> Back to Home
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
           </Link>
         </div>
       </motion.div>

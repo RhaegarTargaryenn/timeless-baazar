@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from '../icons';
 
 /**
  * The shared primitives.
@@ -15,8 +15,11 @@ const cx = (...classes) => classes.filter(Boolean).join(' ');
 // ── Button ─────────────────────────────────────────────────────────────────
 
 const BUTTON_VARIANTS = {
+  // `active:shadow-press` collapses the lift on touch-down, so the button drops
+  // toward the page as it shrinks instead of hovering at the same height while
+  // getting smaller. That combination is what reads as physically pushed.
   primary:
-    'bg-brand-600 text-white shadow-brand hover:bg-brand-700 active:bg-brand-800 disabled:bg-brand-600/50',
+    'bg-brand-600 text-white shadow-brand active:shadow-press hover:bg-brand-700 active:bg-brand-800 disabled:bg-brand-600/50',
   secondary:
     'bg-surface-raised text-ink border border-line hover:bg-surface-sunken active:bg-surface-sunken',
   ghost: 'text-ink-muted hover:bg-surface-sunken active:bg-surface-sunken',
@@ -51,7 +54,8 @@ export const Button = ({
       to={to}
       disabled={Component === 'button' ? disabled || loading : undefined}
       className={cx(
-        'inline-flex items-center justify-center font-semibold transition-colors',
+        // Shadow is in the transition too, or the press drop would snap.
+        'inline-flex items-center justify-center font-semibold transition-[color,background-color,border-color,box-shadow] duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
         'disabled:cursor-not-allowed disabled:opacity-60',
         BUTTON_VARIANTS[variant],
@@ -167,9 +171,58 @@ export const Field = ({ label, hint, error, children }) => (
  * Used instead of a spinner wherever the shape of what is coming is known — it
  * reads as "loading this page" rather than "something is happening somewhere".
  */
-export const Skeleton = ({ className }) => (
-  <div className={cx('relative overflow-hidden bg-surface-sunken rounded-xl', className)}>
+export const Skeleton = ({ className, ...rest }) => (
+  <div
+    className={cx('relative overflow-hidden bg-surface-sunken rounded-xl', className)}
+    {...rest}
+  >
     <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-black/[0.04] dark:via-white/[0.06] to-transparent" />
+  </div>
+);
+
+/**
+ * The whole-screen placeholder, for the gap before a route's chunk arrives and
+ * while the session is still being restored.
+ *
+ * A centred spinner is the most website-like thing an app can show: it says
+ * "something is happening somewhere" and gives the eye nothing to settle on, so
+ * a 400ms wait and a 4s wait look identical. This paints the shape that is
+ * coming instead, which reads as the screen already being here and merely
+ * unfinished -- the same reason the product grid uses skeletons.
+ *
+ * Deliberately generic. It stands in for Home, Cart, Orders and Checkout alike,
+ * so it commits to nothing more specific than a title, a wide block and a few
+ * rows. Guessing a layout and guessing wrong is worse than not guessing: the
+ * content lands and visibly rearranges.
+ */
+export const PageSkeleton = () => (
+  <div
+    className="min-h-screen bg-surface px-[25px] pt-6"
+    /*
+      A screen reader should hear that something is loading, not read out the
+      shape of nine empty boxes.
+    */
+    role="status"
+    aria-label="Loading"
+  >
+    <Skeleton className="h-7 w-1/2 rounded-lg" />
+    <Skeleton className="h-[51px] w-full mt-6 rounded-[15px]" />
+    <Skeleton className="h-[115px] w-full mt-6 rounded-lg" />
+
+    <div className="mt-7 space-y-3">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <Skeleton
+          key={index}
+          className="h-16 rounded-card"
+          /*
+            Each row a little fainter than the one above it. The eye reads the
+            fade as "the list continues past here" rather than as four items
+            that happen to be blank.
+          */
+          style={{ opacity: 1 - index * 0.18 }}
+        />
+      ))}
+    </div>
   </div>
 );
 

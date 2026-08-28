@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft } from './icons';
 
 import { tap } from '../lib/motion';
 import { cx } from './ui';
@@ -58,7 +58,7 @@ const PageHeader = ({ title, back = true, onBack, right, className, titleClassNa
           aria-label="Go back"
           className="absolute left-[15px] top-[max(2.625rem,calc(env(safe-area-inset-top)+0.375rem))] w-10 h-10 flex items-center justify-center text-ink"
         >
-          <ChevronLeft className="w-6 h-6" strokeWidth={2.6} />
+          <ChevronLeft className="w-6 h-6" />
         </motion.button>
       )}
 

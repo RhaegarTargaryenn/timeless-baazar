@@ -1,6 +1,6 @@
 import React, { useState, memo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus } from './icons';
 
 import useCartStore from '../store/cartStore';
 import ProductDetailsModal from './ProductDetailsModal';
@@ -88,7 +88,7 @@ const AddControl = ({ product, variant, disabled, compact = false }) => {
           compact ? 'w-[38px] h-[38px]' : 'w-[46px] h-[46px]'
         )}
       >
-        <Plus className={compact ? 'w-4 h-4' : 'w-5 h-5'} strokeWidth={2.6} />
+        <Plus className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
       </div>
     );
   }
@@ -122,7 +122,7 @@ const AddControl = ({ product, variant, disabled, compact = false }) => {
               compact ? 'w-[38px]' : 'w-[46px]'
             )}
           >
-            <Plus className={compact ? 'w-4 h-4' : 'w-5 h-5'} strokeWidth={2.8} />
+            <Plus className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
           </motion.button>
         ) : (
           <motion.div
@@ -143,7 +143,7 @@ const AddControl = ({ product, variant, disabled, compact = false }) => {
               aria-label="Reduce quantity"
               className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center"
             >
-              <Minus className="w-3.5 h-3.5" strokeWidth={3} />
+              <Minus className="w-3.5 h-3.5" />
             </motion.button>
 
             <motion.span
@@ -165,7 +165,7 @@ const AddControl = ({ product, variant, disabled, compact = false }) => {
               aria-label="Increase quantity"
               className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center"
             >
-              <Plus className="w-3.5 h-3.5" strokeWidth={3} />
+              <Plus className="w-3.5 h-3.5" />
             </motion.button>
           </motion.div>
         )}

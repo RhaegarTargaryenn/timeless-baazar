@@ -9,7 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { motion } from 'framer-motion';
-import { HiMail, HiLockClosed, HiUser, HiEye, HiEyeOff, HiArrowLeft } from 'react-icons/hi';
+import { Mail, LockClosed, User, Eye, EyeOff, ArrowLeft } from '../components/icons';
 import { FcGoogle } from 'react-icons/fc';
 import toast from 'react-hot-toast';
 
@@ -163,7 +163,7 @@ const Signup = () => {
                     label: 'Full Name',
                     name: 'name',
                     type: 'text',
-                    icon: <HiUser className="w-4 h-4" />,
+                    icon: <User className="w-4 h-4" />,
                     placeholder: 'Your Name',
                     autocomplete: 'name',
                   },
@@ -171,7 +171,7 @@ const Signup = () => {
                     label: 'Email',
                     name: 'email',
                     type: 'email',
-                    icon: <HiMail className="w-4 h-4" />,
+                    icon: <Mail className="w-4 h-4" />,
                     placeholder: 'you@example.com',
                     autocomplete: 'email',
                   },
@@ -203,7 +203,7 @@ const Signup = () => {
                     Password
                   </label>
                   <div className="relative">
-                    <HiLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint w-4 h-4" />
+                    <LockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint w-4 h-4" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={emailForm.password}
@@ -219,7 +219,7 @@ const Signup = () => {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-faint"
                     >
-                      {showPassword ? <HiEyeOff className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
@@ -230,7 +230,7 @@ const Signup = () => {
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <HiLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint w-4 h-4" />
+                    <LockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint w-4 h-4" />
                     <input
                       type={showConfirm ? 'text' : 'password'}
                       value={emailForm.confirmPassword}
@@ -251,7 +251,7 @@ const Signup = () => {
                       onClick={() => setShowConfirm(!showConfirm)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-faint"
                     >
-                      {showConfirm ? <HiEyeOff className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
+                      {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   {passwordsMismatch && (
@@ -296,7 +296,7 @@ const Signup = () => {
             to="/"
             className="text-sm text-white/50 hover:text-white flex items-center justify-center gap-1"
           >
-            <HiArrowLeft className="w-3.5 h-3.5" /> Back to Home
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
           </Link>
         </div>
       </motion.div>

@@ -1,9 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Eye, EyeOff, Pencil, Check, X, Loader2, PackageX } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Plus, Search, Eye, EyeOff, Pencil, Check, X, Loader2, PackageX } from '../../components/icons';
 import toast from 'react-hot-toast';
 
 import { api, formatRupees, paiseToRupees, rupeesToPaise } from '../../lib/api';
+import { haptic } from '../../lib/haptics';
+import { spring, gridContainer, gridItem } from '../../lib/motion';
+import { Skeleton, Button, EmptyState, cx } from '../../components/ui';
 
 /**
  * Edit one variant's price without leaving the list.
@@ -133,12 +137,14 @@ const ProductRow = ({ product, onChanged }) => {
   };
 
   return (
-    <div
-      className={`bg-surface-raised rounded-2xl border p-3 transition-colors ${
-        product.isActive
-          ? 'border-line'
-          : 'border-dashed border-line bg-surface-sunken/60'
-      }`}
+    <motion.div
+      variants={gridItem}
+      layout
+      transition={spring.layout}
+      className={cx(
+        'bg-surface-raised rounded-2xl border p-3 transition-colors',
+        product.isActive ? 'border-line' : 'border-dashed border-line bg-surface-sunken/60'
+      )}
     >
       <div className="flex gap-3">
         <div className="w-16 h-16 rounded-xl bg-surface-sunken overflow-hidden shrink-0">
@@ -214,7 +220,7 @@ const ProductRow = ({ product, onChanged }) => {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -260,46 +266,76 @@ const AdminProducts = () => {
     );
   }, []);
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return products.filter((product) => {
-      if (categoryFilter !== 'all' && product.category?.slug !== categoryFilter) return false;
-      if (visibility === 'live' && !product.isActive) return false;
-      if (visibility === 'hidden' && product.isActive) return false;
+  const matchesSearch = useCallback(
+    (product) => {
+      const query = search.trim().toLowerCase();
       if (!query) return true;
-
       return (
         product.name.toLowerCase().includes(query) ||
         (product.nameHindi ?? '').includes(search.trim())
       );
-    });
-  }, [products, search, categoryFilter, visibility]);
+    },
+    [search]
+  );
 
-  const hiddenCount = products.filter((p) => !p.isActive).length;
+  const matchesVisibility = useCallback(
+    (product) => {
+      if (visibility === 'live') return product.isActive;
+      if (visibility === 'hidden') return !product.isActive;
+      return true;
+    },
+    [visibility]
+  );
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 gap-3">
-        <Loader2 className="w-7 h-7 text-brand-600 animate-spin" />
-        <p className="text-sm text-ink-muted">Loading your products...</p>
-      </div>
-    );
-  }
+  const filtered = useMemo(
+    () =>
+      products.filter(
+        (product) =>
+          matchesVisibility(product) &&
+          matchesSearch(product) &&
+          (categoryFilter === 'all' || product.category?.slug === categoryFilter)
+      ),
+    [products, matchesVisibility, matchesSearch, categoryFilter]
+  );
 
-  if (error) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-sm text-ink-muted mb-4">{error}</p>
-        <button
-          onClick={load}
-          className="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl"
-        >
-          Try again
-        </button>
-      </div>
-    );
-  }
+  const visibilityCounts = useMemo(
+    () => ({
+      all: products.length,
+      live: products.filter((product) => product.isActive).length,
+      hidden: products.filter((product) => !product.isActive).length,
+    }),
+    [products]
+  );
+
+  /**
+   * How many products each category pill would show **given the filter above
+   * it**, not in the catalogue overall.
+   *
+   * This is what makes the two rows one control rather than two unrelated ones:
+   * switch the top row to "Hidden" and the category numbers become how many
+   * hidden products each category holds. A count that ignored the row above it
+   * would send the client tapping into empty categories.
+   */
+  const categoryCounts = useMemo(() => {
+    const counts = { all: 0 };
+    for (const product of products) {
+      if (!matchesVisibility(product) || !matchesSearch(product)) continue;
+      counts.all += 1;
+      const slug = product.category?.slug;
+      if (slug) counts[slug] = (counts[slug] ?? 0) + 1;
+    }
+    return counts;
+  }, [products, matchesVisibility, matchesSearch]);
+
+  // A category with nothing in it under the current filter is noise, so it goes
+  // -- unless it is the one selected, which must stay visible to be undone.
+  const visibleCategories = useMemo(
+    () =>
+      categories.filter(
+        (category) => (categoryCounts[category.slug] ?? 0) > 0 || categoryFilter === category.slug
+      ),
+    [categories, categoryCounts, categoryFilter]
+  );
 
   return (
     <div className="space-y-4">
@@ -308,12 +344,13 @@ const AdminProducts = () => {
           <h1 className="text-xl font-bold text-ink">Products</h1>
           <p className="text-xs text-ink-muted mt-0.5">
             {products.length} total
-            {hiddenCount > 0 && ` · ${hiddenCount} hidden`}
+            {visibilityCounts.hidden > 0 && ` · ${visibilityCounts.hidden} hidden`}
           </p>
         </div>
         <Link
           to="/admin/products/new"
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 text-white text-sm font-bold rounded-xl shadow-card shrink-0"
+          onClick={() => haptic('tap')}
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 text-white text-sm font-bold rounded-xl shadow-brand active:shadow-press shrink-0"
         >
           <Plus className="w-4 h-4" />
           Add
@@ -337,54 +374,151 @@ const AdminProducts = () => {
         />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
+      {/*
+        Two levels, and the order matters.
+
+        The old screen ran visibility and category as one long scrolling row
+        with a divider between them, so two unrelated questions looked like one
+        list and the category pills were usually off-screen. Now the primary
+        cut -- is this on the shop or not -- is a fixed segmented control that
+        is always fully visible, and the categories sit under it as a scrolling
+        row whose counts follow whatever it is set to.
+      */}
+      <div className="grid grid-cols-3 gap-1 p-1 bg-surface-sunken rounded-xl">
         {[
           { id: 'all', label: 'All' },
           { id: 'live', label: 'On shop' },
-          { id: 'hidden', label: `Hidden${hiddenCount ? ` (${hiddenCount})` : ''}` },
-        ].map(({ id, label }) => (
-          <button
-            key={id}
-            onClick={() => setVisibility(id)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-              visibility === id
-                ? 'bg-forest text-white'
-                : 'bg-surface-raised text-ink-muted border border-line'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-
-        <div className="w-px bg-line mx-1 shrink-0" />
-
-        {[{ slug: 'all', name: 'Every category' }, ...categories].map((category) => (
-          <button
-            key={category.slug}
-            onClick={() => setCategoryFilter(category.slug)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-              categoryFilter === category.slug
-                ? 'bg-brand-600 text-white'
-                : 'bg-surface-raised text-ink-muted border border-line'
-            }`}
-          >
-            {category.name}
-          </button>
-        ))}
+          { id: 'hidden', label: 'Hidden' },
+        ].map(({ id, label }) => {
+          const active = visibility === id;
+          return (
+            <button
+              key={id}
+              onClick={() => {
+                if (!active) haptic('tap');
+                setVisibility(id);
+              }}
+              className={cx(
+                'relative h-9 rounded-lg text-xs font-bold transition-colors',
+                active ? 'text-white' : 'text-ink-muted'
+              )}
+            >
+              {active && (
+                <motion.span
+                  layoutId="admin-visibility-pill"
+                  transition={spring.layout}
+                  className="absolute inset-0 rounded-lg bg-forest"
+                />
+              )}
+              <span className="relative">
+                {label}
+                {visibilityCounts[id] > 0 && (
+                  <span className={cx('ml-1 tabular', active ? 'text-white/60' : 'text-ink-faint')}>
+                    {visibilityCounts[id]}
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-sm text-ink-muted">
-            No products match that.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {filtered.map((product) => (
-            <ProductRow key={product._id} product={product} onChanged={handleChanged} />
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
+        {[{ slug: 'all', name: 'Every category' }, ...visibleCategories].map((category) => {
+          const active = categoryFilter === category.slug;
+          const count = categoryCounts[category.slug] ?? 0;
+          return (
+            <button
+              key={category.slug}
+              onClick={() => {
+                if (!active) haptic('tap');
+                setCategoryFilter(category.slug);
+              }}
+              className={cx(
+                'px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0',
+                active
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-surface-raised text-ink-muted border border-line'
+              )}
+            >
+              {category.name}
+              {count > 0 && (
+                <span className={cx('ml-1.5 tabular', active ? 'text-white/70' : 'text-ink-faint')}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {loading ? (
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 gap-2.5"
+          role="status"
+          aria-label="Loading products"
+        >
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton
+              key={index}
+              className="h-[104px] rounded-2xl"
+              style={{ opacity: 1 - index * 0.12 }}
+            />
           ))}
         </div>
+      ) : error ? (
+        <div className="text-center py-16">
+          <p className="text-sm text-ink-muted mb-4">{error}</p>
+          <Button size="sm" onClick={load}>
+            Try again
+          </Button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={<PackageX className="w-7 h-7" />}
+          title="Nothing matches"
+          message={
+            search.trim()
+              ? `No product is called "${search.trim()}".`
+              : 'Try a different filter.'
+          }
+          action={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setSearch('');
+                setCategoryFilter('all');
+                setVisibility('all');
+              }}
+            >
+              Clear filters
+            </Button>
+          }
+        />
+      ) : (
+        <>
+          <p className="text-xs text-ink-faint">
+            Showing {filtered.length} of {products.length}
+          </p>
+
+          {/*
+            Two columns from `md` up. These cards are a fixed height and only
+            about 400px of content wide, so a single column on a tablet or the
+            client's laptop left most of the screen empty and made them scroll
+            through 71 products one at a time.
+          */}
+          <motion.div
+            variants={gridContainer}
+            initial="initial"
+            animate="animate"
+            className="grid grid-cols-1 md:grid-cols-2 gap-2.5"
+          >
+            {filtered.map((product) => (
+              <ProductRow key={product._id} product={product} onChanged={handleChanged} />
+            ))}
+          </motion.div>
+        </>
       )}
     </div>
   );

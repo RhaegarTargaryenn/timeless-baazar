@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Wallet, Check, Clock } from 'lucide-react';
+import { Wallet, Check, Clock } from './icons';
 import { SiPhonepe, SiPaytm, SiGooglepay } from 'react-icons/si';
 
 import { spring, tap } from '../lib/motion';
@@ -71,7 +71,7 @@ const PaymentMethod = ({ onSelectMethod, selectedMethod }) => (
                   animate={{ scale: 1 }}
                   transition={spring.snappy}
                 >
-                  <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                  <Check className="w-3.5 h-3.5 text-white" />
                 </motion.span>
               )}
             </span>

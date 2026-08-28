@@ -31,6 +31,7 @@ cd frontend && npm run preview  # serve the production build
 
 cd backend && npm run dev       # API on :4000
 cd backend && npm run seed      # reseed products
+cd backend && npm run migrate-orders   # one-off: six old statuses -> two
 ```
 
 ## Conventions
@@ -40,6 +41,17 @@ cd backend && npm run seed      # reseed products
 - The package is ESM (`"type": "module"`), so config files use `export default`.
 - Env vars need the `VITE_` prefix and are read via `import.meta.env`.
   `process.env` does not exist in this app.
+- **Orders have three statuses: `placed`, `completed`, `cancelled`.** The
+  six-stage lifecycle is gone (see `ORDER_STATUSES` in
+  `backend/src/models/Order.js`). `cancelled` is an **end state beside**
+  `completed`, never a stage on the way to it -- never draw the three as a
+  progress bar. Every transition is reversible; reopening returns an order to
+  `placed`.
+- **Cancelled orders must stay excluded from coupon-usage counts.** Both
+  `routes/orders.js` and `routes/coupons.js` count a customer's past uses with
+  `status: { $ne: 'cancelled' }`, and the two must stay in step. Without it, the
+  shop voiding a mistaken order burns the customer's one use of a code for an
+  order that never happened.
 - Prices: never read `price1kg` / `price500g` directly to decide whether
   something is buyable. Use `isPurchasable(product, size)` from
   `src/data/products.js` — it is the single source of truth.
@@ -68,6 +80,14 @@ Without the API the shop renders empty.
 
 - Money is **integer paise** everywhere server-side and across the API. Convert
   to rupees only for display, via `formatRupees` in `src/lib/api.js`.
+- **Fonts are self-hosted in `frontend/public/fonts/`. Never add a Google Fonts
+  `@import` or `<link>` back.** Inter (Latin) + Noto Sans Devanagari (the Hindi
+  product names -- all 71 have one, and Inter has no Devanagari), both variable
+  across 100-900, all gated by `unicode-range` so only ~49 kB loads on a typical
+  page. ₹ (U+20B9) lives in its own 2.3 kB file because Google's subsetting puts
+  it in Latin Extended, and it appears on every screen. Regeneration commands
+  are in `public/fonts/README.md`. Adding a font file means bumping `CACHE_NAME`
+  in `public/service-worker.js`.
 - Colours come from the semantic tokens only: `surface`, `surface-raised`,
   `surface-sunken`, `line`, `ink`, `ink-muted`, `ink-faint`, `brand`, `forest`,
   `coral`, `cream`. No `gray-*` or `green-*` utilities remain in `src` -- do not
@@ -85,9 +105,23 @@ Without the API the shop renders empty.
   defaults fire for absent keys and the update wipes fields the caller never
   mentioned -- this silently erased product photos once already.
 - A CSS `mask` erases `box-shadow` too. Use `filter: drop-shadow` on a wrapper.
-- **Icons come from lucide-react, not Figma.** Exporting glyphs from the design
-  file was tried and reverted -- lucide matches every one. Artwork (the carrot
-  mark, the banner) still comes from the file.
+- **Every icon comes from `src/components/icons.jsx`**, and that file is the
+  only place allowed to name `@phosphor-icons/react`. Import from it, never from
+  the package. Phosphor replaced lucide on 2026-08-28 because it ships six
+  weights of every glyph, which is what lets the bottom nav go outline ->
+  filled on the active tab; lucide has one weight and could not. The exports
+  keep lucide's old *names* (`Search` is Phosphor's `MagnifyingGlass`,
+  `ChevronLeft` is `CaretLeft`) so the migration stayed an import swap -- the
+  mapping is documented in that file.
+  - App-wide weight is `bold`, set once via `IconContext` in `App.jsx`, because
+    Phosphor's `regular` is thinner than the 2px lucide the design was matched
+    against. Pass `weight="regular"` or `weight="fill"` per icon as needed.
+    **Do not pass `strokeWidth`** -- that was lucide's prop and does nothing.
+  - `react-icons` survives for brand marks only -- `FcGoogle`, `SiPhonepe`,
+    `SiPaytm`, `SiGooglepay`. Phosphor has no logos. Do not use it for UI icons.
+- **Icons do not come from Figma.** Exporting glyphs from the design file was
+  tried and reverted. Artwork (the carrot mark, the banner) still comes from the
+  file.
 - Category tile colours come from `src/lib/categoryTints.js`, shared by Home and
   Explore. Do not hardcode a tint in either.
 - `ForestHeader` and `ScallopedSeam` belong to the abandoned design. Do not

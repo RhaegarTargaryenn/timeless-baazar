@@ -64,8 +64,22 @@ export default {
         'ink-faint': 'rgb(var(--ink-faint) / <alpha-value>)',
       },
 
+      /**
+       * Inter for Latin, Noto Sans Devanagari for the Hindi product names, then
+       * the metric-matched fallback. Font fallback is resolved per character,
+       * so a name like "Arhar Dal / अरहर दाल" takes each half from the face
+       * that actually has the glyphs.
+       */
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+        sans: [
+          'Inter',
+          'Noto Sans Devanagari',
+          'Inter Fallback',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'system-ui',
+          'sans-serif',
+        ],
       },
 
       // A grocery app reads as friendly through roundness more than colour.
@@ -77,17 +91,71 @@ export default {
         seam: '2rem',
       },
 
+      /**
+       * The elevation ramp.
+       *
+       * Every shadow here is built from three stacked layers, because a single
+       * blur is what makes an interface look flat-with-a-smudge-under-it rather
+       * than lit. Real objects cast three distinguishable shadows and the eye
+       * reads all of them:
+       *
+       *   1. **Contact** -- 1px, barely blurred, the darkest. This is where the
+       *      object meets the surface, and it is the layer that actually sells
+       *      the depth. Leaving it out is why most CSS shadows look like fog.
+       *   2. **Direct** -- a medium blur offset downward, the cast shadow.
+       *   3. **Ambient** -- wide, very faint, no offset to speak of. Occlusion.
+       *
+       * Alpha roughly halves at each step outward while the blur roughly
+       * doubles, so the falloff is smooth rather than banded.
+       *
+       * The colour is `16 24 40` -- a desaturated navy, not black. A pure-black
+       * shadow over a warm white page goes grey and muddy; a cool one stays
+       * neutral against the design's `#F2F3F2`.
+       */
       boxShadow: {
-        card: '0 1px 2px rgb(16 24 40 / 0.04), 0 4px 12px -4px rgb(16 24 40 / 0.06)',
-        lift: '0 4px 8px -2px rgb(16 24 40 / 0.06), 0 12px 28px -8px rgb(16 24 40 / 0.10)',
-        sheet: '0 -8px 40px -12px rgb(16 24 40 / 0.22)',
+        card:
+          '0 1px 1px rgb(16 24 40 / 0.05), ' +
+          '0 2px 6px -1px rgb(16 24 40 / 0.05), ' +
+          '0 8px 20px -6px rgb(16 24 40 / 0.06)',
+        lift:
+          '0 1px 2px rgb(16 24 40 / 0.06), ' +
+          '0 6px 12px -3px rgb(16 24 40 / 0.08), ' +
+          '0 18px 36px -10px rgb(16 24 40 / 0.10)',
+        sheet:
+          '0 -1px 2px rgb(16 24 40 / 0.05), ' +
+          '0 -8px 20px -6px rgb(16 24 40 / 0.10), ' +
+          '0 -24px 56px -16px rgb(16 24 40 / 0.20)',
+
         // Buttons carry a tinted shadow so the primary action reads as raised
-        // rather than merely coloured.
-        brand: '0 4px 14px -4px rgb(83 177 117 / 0.45)',
-        // The floating nav pill needs to read as hovering over the page.
-        float: '0 8px 30px -6px rgb(13 59 44 / 0.35)',
+        // rather than merely coloured. Tinted with the button's own green:
+        // a neutral shadow under a saturated fill reads as dirt on the page.
+        brand:
+          '0 1px 2px rgb(56 117 76 / 0.24), ' +
+          '0 4px 10px -2px rgb(83 177 117 / 0.32), ' +
+          '0 12px 24px -8px rgb(83 177 117 / 0.36)',
+
+        // The floating nav pill needs to read as hovering over the page, so its
+        // ambient layer is wider and heavier than a card's -- distance from the
+        // surface shows up as blur, not as darkness.
+        float:
+          '0 1px 2px rgb(13 59 44 / 0.10), ' +
+          '0 8px 20px -6px rgb(13 59 44 / 0.18), ' +
+          '0 24px 48px -12px rgb(13 59 44 / 0.24)',
+
         // The bottom bar: a white shelf lifting off the page.
-        shelf: '0 -12px 37px 0 rgb(230 235 243 / 0.5)',
+        shelf:
+          '0 -1px 2px rgb(16 24 40 / 0.04), ' +
+          '0 -8px 24px -8px rgb(16 24 40 / 0.08), ' +
+          '0 -20px 48px -16px rgb(16 24 40 / 0.10)',
+
+        /**
+         * Pressed.
+         *
+         * The contact layer alone, tightened. Pairs with the `tap` scale in
+         * `lib/motion.js`: a button that shrinks *and* drops toward the page
+         * reads as pushed, where scale on its own reads as merely smaller.
+         */
+        press: '0 1px 1px rgb(16 24 40 / 0.06)',
       },
 
       // Bottom nav and sheets have to clear the iOS home indicator.

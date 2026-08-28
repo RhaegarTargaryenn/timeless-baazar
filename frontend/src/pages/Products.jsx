@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, SearchX, WifiOff, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SearchX, WifiOff, SlidersHorizontal, X } from '../components/icons';
 
 import ProductCard from '../components/ProductCard';
 import { useProducts } from '../hooks/useProducts';
@@ -30,7 +30,6 @@ const SearchField = ({ value, onChange }) => (
   <div className="relative">
     <Search
       className="absolute left-[15px] top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-ink-muted pointer-events-none"
-      strokeWidth={2.4}
     />
     <input
       type="search"
@@ -162,7 +161,7 @@ const Products = () => {
                 filterOpen ? 'text-brand-600' : 'text-ink'
               )}
             >
-              <SlidersHorizontal className="w-[18px] h-[18px]" strokeWidth={2.2} />
+              <SlidersHorizontal className="w-[18px] h-[18px]" />
             </motion.button>
           )
         }

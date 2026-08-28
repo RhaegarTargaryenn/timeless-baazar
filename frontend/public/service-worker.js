@@ -1,7 +1,10 @@
 /* eslint-disable no-restricted-globals */
 // Service Worker for Timeless Baazar PWA
 
-const CACHE_NAME = 'timeless-baazar-v2';
+// v3: fonts are self-hosted now and joined the precache. Bumping the name makes
+// the activate handler drop v2, so nobody is left holding a cache that has the
+// old Google Fonts-era shell in it.
+const CACHE_NAME = 'timeless-baazar-v3';
 
 // Sirf wahi files jo build output me guaranteed hain. Hashed JS/CSS runtime par
 // fetch handler cache karta hai. cache.addAll() atomic hai -- ek 404 poori
@@ -10,7 +13,12 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/icon-192.png',
-  '/icon-512.png'
+  '/icon-512.png',
+  // Self-hosted, always needed, and guaranteed in the build output because they
+  // are copied verbatim from public/. The other two font files are deliberately
+  // left out: unicode-range means most visitors never fetch them at all.
+  '/fonts/inter-latin.woff2',
+  '/fonts/inter-rupee.woff2'
 ];
 
 // Install event - cache resources
@@ -57,7 +65,8 @@ self.addEventListener('fetch', (event) => {
   // GET ke alawa kuch bhi cache mat karo (orders, auth, Sheets ke POST).
   if (request.method !== 'GET') return;
 
-  // Cross-origin (Firebase, Google Sheets, fonts) seedha network par jaaye.
+  // Cross-origin (Firebase, Google Sheets, the API) seedha network par jaaye.
+  // Fonts ab same-origin hain, to woh neeche cache-first handler me jaate hain.
   if (new URL(request.url).origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {

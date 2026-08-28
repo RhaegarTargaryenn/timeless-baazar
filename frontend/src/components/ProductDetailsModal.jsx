@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Minus, Plus, ChevronDown, Heart } from 'lucide-react';
+import { ChevronLeft, Minus, Plus, ChevronDown, Heart } from './icons';
 import toast from 'react-hot-toast';
 
 import useCartStore from '../store/cartStore';
@@ -154,7 +154,7 @@ const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
               aria-label="Back"
               className="absolute top-[46px] left-[25px] z-10 w-10 h-10 -ml-2.5 -mt-2.5 flex items-center justify-center text-ink"
             >
-              <ChevronLeft className="w-6 h-6" strokeWidth={2.6} />
+              <ChevronLeft className="w-6 h-6" />
             </motion.button>
 
             {hasDiscount && (
@@ -214,7 +214,7 @@ const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
                   {[variant?.label, product.nameHindi].filter(Boolean).join(', ') || '—'}
                 </p>
               </div>
-              <Heart className="w-6 h-6 shrink-0 mt-1 text-ink-faint" strokeWidth={1.8} />
+              <Heart className="w-6 h-6 shrink-0 mt-1 text-ink-faint" weight="regular" />
             </div>
 
             {/* Counter against the price, as the design weighs them */}
@@ -227,7 +227,7 @@ const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
                   aria-label="Reduce quantity"
                   className="text-ink-faint disabled:opacity-40"
                 >
-                  <Minus className="w-[18px] h-[18px]" strokeWidth={2.6} />
+                  <Minus className="w-[18px] h-[18px]" />
                 </motion.button>
 
                 <span className="w-[46px] h-[46px] rounded-[17px] border border-line flex items-center justify-center">
@@ -248,7 +248,7 @@ const ProductDetailsModal = memo(({ product, isOpen, onClose }) => {
                   aria-label="Increase quantity"
                   className="text-brand-600"
                 >
-                  <Plus className="w-[18px] h-[18px]" strokeWidth={2.6} />
+                  <Plus className="w-[18px] h-[18px]" />
                 </motion.button>
               </div>
 

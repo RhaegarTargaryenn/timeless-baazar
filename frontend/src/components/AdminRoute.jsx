@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation, Link } from 'react-router-dom';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert } from './icons';
 import { useAuth } from '../context/AuthContext';
 
 const Loader = ({ label }) => (

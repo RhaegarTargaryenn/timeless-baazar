@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MailCheck, RefreshCw } from 'lucide-react';
+import { MailCheck, RefreshCw } from './icons';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 

@@ -4,12 +4,11 @@ import {
   Package,
   Clock,
   CheckCircle2,
-  Truck,
   XCircle,
   ChevronRight,
   MessageCircle,
   Receipt,
-} from 'lucide-react';
+} from '../components/icons';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '../context/AuthContext';
@@ -35,18 +34,29 @@ import { pageIn, spring, tap, gridItem, gridContainer, EASE } from '../lib/motio
  */
 
 /**
- * The delivery journey, in order.
+ * The journey, in order. Two stops.
  *
- * `cancelled` is deliberately outside this list — it is not a stage on the way
- * to delivered, and drawing it as one would be misleading.
+ * It used to draw five -- received, confirmed, packed, out for delivery,
+ * delivered -- and the shop had no way to advance any of them. Every order sat
+ * on the first stage forever, so the trail was showing the customer four
+ * greyed-out stages that would never light up, which reads as an order that has
+ * been forgotten rather than one that is being packed.
+ *
+ * Two stages are two the shop actually keeps true: the order is in, and the
+ * order has been handed over.
  */
 const JOURNEY = [
-  { id: 'pending', label: 'Order received', icon: Clock },
-  { id: 'confirmed', label: 'Confirmed', icon: CheckCircle2 },
-  { id: 'packed', label: 'Packed', icon: Package },
-  { id: 'out_for_delivery', label: 'Out for delivery', icon: Truck },
-  { id: 'delivered', label: 'Delivered', icon: CheckCircle2 },
+  { id: 'placed', label: 'Order placed', icon: Clock },
+  { id: 'completed', label: 'Completed', icon: CheckCircle2 },
 ];
+
+/**
+ * `cancelled` is deliberately not in JOURNEY.
+ *
+ * It is an end state beside `completed`, not a stop on the way to it. Drawing
+ * it as a stage would tell the customer their cancelled order is still moving.
+ */
+const CANCELLED = 'cancelled';
 
 const formatDate = (value) =>
   new Date(value).toLocaleDateString('en-IN', {
@@ -55,15 +65,15 @@ const formatDate = (value) =>
     year: 'numeric',
   });
 
-/** Delivered reads as settled, cancelled as wrong, everything else as pending. */
+/** Completed reads as settled, cancelled as wrong, anything else as open. */
 const statusTone = (status) => {
-  if (status === 'delivered') return 'brand';
-  if (status === 'cancelled') return 'red';
+  if (status === 'completed') return 'brand';
+  if (status === CANCELLED) return 'red';
   return 'amber';
 };
 
 const statusLabel = (status) =>
-  status === 'cancelled'
+  status === CANCELLED
     ? 'Cancelled'
     : JOURNEY.find((stage) => stage.id === status)?.label ?? status;
 
@@ -73,14 +83,19 @@ const SubHeading = ({ children }) => (
 );
 
 const StatusTrail = ({ status }) => {
-  if (status === 'cancelled') {
+  /*
+    A cancelled order gets its own panel instead of the trail: there is no
+    progress left to show, and the one thing the customer wants is a way to
+    query it.
+  */
+  if (status === CANCELLED) {
     return (
       <div className="flex items-center gap-3 p-4 rounded-[19px] bg-surface-sunken">
-        <XCircle className="w-6 h-6 text-coral shrink-0" strokeWidth={2} />
+        <XCircle className="w-6 h-6 text-coral shrink-0" />
         <div>
           <p className="text-[16px] font-semibold text-ink">Order cancelled</p>
           <p className="text-[14px] text-ink-muted mt-0.5">
-            Call the shop if you think this is a mistake.
+            The shop cancelled this order. Call them if you think it is a mistake.
           </p>
         </div>
       </div>
@@ -108,7 +123,7 @@ const StatusTrail = ({ status }) => {
                   done ? 'bg-brand-600 text-white' : 'bg-surface-sunken text-ink-faint'
                 )}
               >
-                <Icon className="w-[18px] h-[18px]" strokeWidth={2} />
+                <Icon className="w-[18px] h-[18px]" />
               </motion.span>
 
               {/* The rail fills only as far as progress has reached */}
@@ -142,7 +157,9 @@ const StatusTrail = ({ status }) => {
                   animate={{ opacity: 1 }}
                   className="text-[14px] text-brand-600 font-semibold mt-0.5"
                 >
-                  Where your order is now
+                  {stage.id === 'completed'
+                    ? 'Handed over by the shop'
+                    : 'The shop has your order and is putting it together'}
                 </motion.p>
               )}
             </div>
@@ -179,7 +196,7 @@ const OrderRow = ({ order, onOpen }) => (
 
     <span className="shrink-0 flex items-center gap-1.5 text-[16px] font-semibold text-ink tabular">
       {formatRupees(order.total)}
-      <ChevronRight className="w-[18px] h-[18px] text-ink-faint" strokeWidth={2.4} />
+      <ChevronRight className="w-[18px] h-[18px] text-ink-faint" />
     </span>
   </motion.button>
 );

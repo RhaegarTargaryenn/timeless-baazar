@@ -21,6 +21,27 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Timeless Baazar" />
   
+  <!--
+    Fonts.
+
+    Preloaded, not merely declared: an @font-face in the stylesheet is not
+    discovered until that stylesheet has been fetched and parsed, so the font
+    request queues behind it. These two start immediately, in parallel with the
+    CSS, which is most of what turns a visible flash of fallback text into no
+    flash at all.
+
+    Only the two faces every screen needs. The Latin Extended and Devanagari
+    files are deliberately NOT preloaded -- their `unicode-range` lets the
+    browser skip them entirely unless the page actually paints one of their
+    characters, and preloading would throw that away.
+
+    `crossorigin` is required even though these are same-origin: fonts are
+    always fetched in CORS mode, and without it the preload is ignored and the
+    file is downloaded a second time.
+  -->
+  <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/inter-rupee.woff2" as="font" type="font/woff2" crossorigin />
+
   <!-- Manifest -->
   <link rel="manifest" href="/manifest.json" />
   

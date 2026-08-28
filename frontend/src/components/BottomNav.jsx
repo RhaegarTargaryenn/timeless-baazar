@@ -3,8 +3,9 @@ import { NavLink } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 
 import useCartStore from '../store/cartStore';
+import { haptic } from '../lib/haptics';
 import { instant, spring, tap } from '../lib/motion';
-import { Store, LayoutGrid, ShoppingCart, Receipt, User } from 'lucide-react';
+import { Store, LayoutGrid, ShoppingCart, Receipt, User } from './icons';
 import { cx } from './ui';
 
 /**
@@ -67,6 +68,14 @@ const BottomNav = () => {
               {({ isActive }) => (
                 <motion.span
                   whileTap={tap}
+                  /*
+                    Only on a real move. Tapping the tab you are already
+                    standing on navigates nowhere, and buzzing for it teaches
+                    the customer that the feedback means nothing.
+                  */
+                  onClick={() => {
+                    if (!isActive) haptic('tap');
+                  }}
                   className="relative flex flex-col items-center justify-center gap-0.5 h-[54px] rounded-full"
                 >
                   {/*
@@ -83,10 +92,42 @@ const BottomNav = () => {
                   )}
 
                   <span className="relative flex h-6 items-center">
-                    <Icon
-                      className={cx('w-[22px] h-[22px]', isActive ? 'text-white' : 'text-ink')}
-                      strokeWidth={2}
-                    />
+                    {/*
+                      The tab glyph, in two weights stacked.
+
+                      A native tab bar does not merely recolour the selected
+                      icon, it fills it -- an outline becomes a solid. Phosphor
+                      ships both weights of every glyph, so this is the outline
+                      sitting underneath with the solid fading in on top of it
+                      rather than two different icons swapping.
+
+                      Crossfaded, not switched: a weight change on its own is a
+                      single-frame pop, and at 22px that reads as a glitch. The
+                      solid also grows in slightly, so the selected tab looks
+                      like it inflated rather than like it was replaced.
+                    */}
+                    <span
+                      className={cx(
+                        'relative block w-[22px] h-[22px]',
+                        isActive ? 'text-white' : 'text-ink'
+                      )}
+                    >
+                      <Icon className="absolute inset-0 w-full h-full" weight="regular" />
+                      <motion.span
+                        /*
+                          `initial={false}` so the tab that is already active on
+                          first paint is simply solid, instead of every mount
+                          animating the fill in.
+                        */
+                        initial={false}
+                        animate={{ opacity: isActive ? 1 : 0, scale: isActive ? 1 : 0.7 }}
+                        transition={reduced ? instant : spring.snappy}
+                        aria-hidden="true"
+                        className="absolute inset-0 block"
+                      >
+                        <Icon className="w-full h-full" weight="fill" />
+                      </motion.span>
+                    </span>
 
                     {badge && count > 0 && (
                       <motion.span

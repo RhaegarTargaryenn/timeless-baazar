@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { MapPin, Plus, X, Check, Home, Briefcase, Loader2 } from 'lucide-react';
+import { MapPin, Plus, X, Check, Home, Briefcase, Loader2 } from './icons';
 import toast from 'react-hot-toast';
 
 import { api } from '../lib/api';
@@ -186,7 +186,7 @@ const AddressManager = ({ onSelectAddress, selectedAddressId }) => {
                     transition={spring.snappy}
                     className="w-6 h-6 rounded-full bg-brand-600 flex items-center justify-center shrink-0"
                   >
-                    <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                    <Check className="w-3.5 h-3.5 text-white" />
                   </motion.span>
                 )}
               </div>

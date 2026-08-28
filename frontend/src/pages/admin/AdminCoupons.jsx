@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Ticket, Trash2, Loader2, X } from 'lucide-react';
+import { Plus, Ticket, Trash2, Loader2, X } from '../../components/icons';
 import toast from 'react-hot-toast';
 
 import { api, formatRupees, rupeesToPaise } from '../../lib/api';

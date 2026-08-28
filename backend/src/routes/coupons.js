@@ -61,6 +61,8 @@ router.post(
     // stranger which codes exist invites guessing.
     if (!coupon) throw new HttpError(404, 'That code is not valid.');
 
+    // Cancelled orders do not consume a use -- see the matching count in
+    // routes/orders.js for why that matters.
     const usedByThisUser = await Order.countDocuments({
       userId: req.user.uid,
       'coupon.code': code,

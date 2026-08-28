@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download } from 'lucide-react';
+import { X, Download } from './icons';
 
 import { usePwaInstall } from '../lib/pwaInstall';
 import { EASE, tap } from '../lib/motion';
@@ -68,7 +68,7 @@ const PWAInstallPrompt = () => {
           <div className="rounded-[19px] bg-surface-raised border border-line shadow-xl p-5">
             <div className="flex items-start gap-4">
               <span className="w-12 h-12 shrink-0 rounded-[16px] bg-brand-50 flex items-center justify-center">
-                <Download className="w-6 h-6 text-brand-600" strokeWidth={2} />
+                <Download className="w-6 h-6 text-brand-600" />
               </span>
 
               <div className="min-w-0 flex-1">

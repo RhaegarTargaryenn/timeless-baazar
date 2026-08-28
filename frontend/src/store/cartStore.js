@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { haptic } from '../lib/haptics';
+
 /**
  * The cart.
  *
@@ -8,6 +10,13 @@ import { persist } from 'zustand/middleware';
  * same unit the API speaks, and are only ever a display convenience: the server
  * recomputes every total from its own catalogue when the order is placed, so a
  * stale price here shows a wrong subtotal but can never be charged.
+ *
+ * **Haptics fire from here, not from the buttons.** Adding to the cart happens
+ * from the card, the detail sheet and the cart page's own stepper; putting the
+ * buzz on the action instead of on each button means all three feel identical
+ * and a fourth call site cannot forget. It also means the feedback tracks what
+ * actually happened rather than what was tapped -- `addItem` rejects an
+ * inactive variant, and a rejected add correctly stays silent.
  */
 const useCartStore = create(
   persist(
@@ -28,6 +37,7 @@ const useCartStore = create(
         );
 
         if (existingIndex > -1) {
+          haptic('select');
           set({
             items: items.map((item, index) =>
               index === existingIndex ? { ...item, quantity: item.quantity + quantity } : item
@@ -36,6 +46,7 @@ const useCartStore = create(
           return;
         }
 
+        haptic('select');
         set({
           items: [
             ...items,
@@ -55,6 +66,8 @@ const useCartStore = create(
       },
 
       removeItem: (productId, variantId) => {
+        // Heavier than a step: this one is destructive and worth feeling.
+        haptic('impact');
         set({
           items: get().items.filter(
             (item) => !(item.productId === productId && item.variantId === variantId)
@@ -64,10 +77,12 @@ const useCartStore = create(
 
       updateQuantity: (productId, variantId, quantity) => {
         if (quantity <= 0) {
+          // Delegates, and `removeItem` supplies its own heavier pattern.
           get().removeItem(productId, variantId);
           return;
         }
 
+        haptic('tap');
         set({
           items: get().items.map((item) =>
             item.productId === productId && item.variantId === variantId

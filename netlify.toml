@@ -39,6 +39,14 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# Self-hosted fonts. Immutable because the filenames are stable and the files
+# never change in place -- a new font version gets a new filename, so this can
+# safely be cached for a year.
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
 [[headers]]
   for = "/service-worker.js"
   [headers.values]

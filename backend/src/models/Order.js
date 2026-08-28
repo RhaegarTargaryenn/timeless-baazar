@@ -1,13 +1,50 @@
 import mongoose from 'mongoose';
 
-export const ORDER_STATUSES = [
-  'pending',
-  'confirmed',
-  'packed',
-  'out_for_delivery',
-  'delivered',
-  'cancelled',
-];
+/**
+ * The whole lifecycle of an order. Two states, deliberately.
+ *
+ * It used to be six -- pending, confirmed, packed, out_for_delivery, delivered,
+ * cancelled -- copied from what a courier-backed store would need. This shop
+ * has no courier, no warehouse and no packing desk: the owner reads the order,
+ * puts it together, and hands it over. Nobody was ever going to stand at the
+ * counter tapping an order through four intermediate stages, so in practice
+ * every order would have sat on `pending` forever and the customer's status
+ * trail would have been decorative.
+ *
+ * Two of these are the states the shop will actually keep honest: an order is
+ * in, or it has been handed over.
+ *
+ * **`cancelled` is a third, and it is not a stage.** It was left out at first
+ * and that was wrong: without it a wrong, duplicate or test order could only be
+ * marked completed, which writes something false into the shop's own records
+ * and, worse, silently consumed the customer's one use of a coupon. It is an
+ * end state that sits beside `completed`, never on the way to it -- nothing
+ * should ever draw these three as a progress bar.
+ */
+export const ORDER_STATUSES = ['placed', 'completed', 'cancelled'];
+
+/**
+ * What the six old statuses become.
+ *
+ * Kept next to the enum rather than buried in the migration script, because
+ * anything reading historical `statusHistory` needs the same mapping. The four
+ * pre-delivery stages all collapse to `placed`: none of them meant the customer
+ * had their goods.
+ *
+ * `cancelled` survives unchanged. An earlier version of this map folded it into
+ * `completed`, because there was no cancelled status to fold it into -- that
+ * was only ever safe because the database happened to hold none. Now that the
+ * status exists again the mapping is the identity, and the migration leaves
+ * those orders alone.
+ */
+export const LEGACY_STATUS_MAP = {
+  pending: 'placed',
+  confirmed: 'placed',
+  packed: 'placed',
+  out_for_delivery: 'placed',
+  delivered: 'completed',
+  cancelled: 'cancelled',
+};
 
 /**
  * A line in an order.
@@ -90,7 +127,7 @@ const orderSchema = new mongoose.Schema(
       value: { type: Number, default: null },
     },
 
-    status: { type: String, enum: ORDER_STATUSES, default: 'pending', index: true },
+    status: { type: String, enum: ORDER_STATUSES, default: 'placed', index: true },
 
     statusHistory: [
       {

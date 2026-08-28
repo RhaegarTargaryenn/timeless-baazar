@@ -8,7 +8,8 @@ import AdminRoute from './components/AdminRoute';
 import Header from './components/Header';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import BottomNav from './components/BottomNav';
-import { cx } from './components/ui';
+import { cx, PageSkeleton } from './components/ui';
+import { IconContext } from './components/icons';
 import './App.css';
 
 const Home = lazy(() => import('./pages/Home'));
@@ -25,15 +26,17 @@ const AccountAddresses = lazy(() => import('./pages/AccountAddresses'));
 // lives in this app rather than a separate one so the API client, auth and
 // design tokens stay in one place.
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
 const AdminProducts = lazy(() => import('./pages/admin/AdminProducts'));
 const AdminProductForm = lazy(() => import('./pages/admin/AdminProductForm'));
 const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'));
 
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-surface-sunken">
-    <div className="w-8 h-8 border-[3px] border-brand-500 border-t-transparent rounded-full animate-spin" />
-  </div>
-);
+/**
+ * Shown while a lazily-loaded route chunk is in flight. On a good connection
+ * this is a couple of frames; on 3G outside the shop it is a few seconds, and
+ * that is the case it is drawn for.
+ */
+const PageLoader = () => <PageSkeleton />;
 
 /**
  * Storefront chrome: the customer header and the install prompt.
@@ -148,8 +151,27 @@ const StorefrontRoutes = () => (
   </StorefrontShell>
 );
 
+/**
+ * The app-wide icon defaults.
+ *
+ * `bold` because Phosphor's `regular` is roughly a 1.5px stroke where lucide
+ * was a flat 2px, so defaulting to regular would have made every screen
+ * abruptly lighter than the design it was matched against. Individual icons
+ * pass `weight="regular"` where they are large enough to carry it, or
+ * `weight="fill"` where they are active or selected.
+ *
+ * `size="1em"` makes an icon inherit the font size of whatever contains it, so
+ * the Tailwind `w-*` / `h-*` classes already on every call site stay in charge
+ * of dimensions and nothing had to be resized during the migration.
+ *
+ * Defined outside the component: a fresh object on every render would
+ * invalidate the context for every icon in the tree on every render.
+ */
+const ICON_DEFAULTS = { weight: 'bold', size: '1em' };
+
 function App() {
   return (
+    <IconContext.Provider value={ICON_DEFAULTS}>
     <ThemeProvider>
       <AuthProvider>
         <Router>
@@ -165,7 +187,10 @@ function App() {
                     </AdminRoute>
                   }
                 >
-                  <Route index element={<Navigate to="/admin/products" replace />} />
+                  {/* Orders is the landing screen: it is the only one with
+                      customers waiting on it. */}
+                  <Route index element={<Navigate to="/admin/orders" replace />} />
+                  <Route path="orders" element={<AdminOrders />} />
                   <Route path="products" element={<AdminProducts />} />
                   <Route path="products/:id" element={<AdminProductForm />} />
                   <Route path="coupons" element={<AdminCoupons />} />
@@ -200,6 +225,7 @@ function App() {
         </Router>
       </AuthProvider>
     </ThemeProvider>
+    </IconContext.Provider>
   );
 }
 

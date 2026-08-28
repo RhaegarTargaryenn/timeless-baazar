@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ArrowRight, Tag, X, MapPin, Wallet } from 'lucide-react';
+import { Check, ArrowRight, Tag, X, MapPin, Wallet } from '../components/icons';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,7 @@ import ForestHeader, { Sheet } from '../components/ForestHeader';
 import OrderAccepted from '../components/OrderAccepted';
 import { Price } from '../components/ProductCard';
 import { pageIn, spring, tap, EASE } from '../lib/motion';
+import { haptic } from '../lib/haptics';
 import { cx } from '../components/ui';
 
 const STEPS = [
@@ -63,8 +64,10 @@ const Checkout = () => {
     try {
       const result = await api.post('/coupons/validate', { code, subtotal });
       setAppliedCoupon({ code: result.coupon.code, discount: result.discount });
+      haptic('select');
       toast.success(`${formatRupees(result.discount)} off applied`);
     } catch (error) {
+      haptic('warning');
       toast.error(error.message);
     } finally {
       setCheckingCoupon(false);
@@ -102,6 +105,9 @@ const Checkout = () => {
 
       setOrderNumber(order.orderNumber);
       clearCart();
+      // The one pattern the customer is meant to notice. This is the moment the
+      // whole flow exists for, and it lands with the order-accepted screen.
+      haptic('success');
       toast.success('Order placed!');
     } catch (error) {
       /*
@@ -126,6 +132,7 @@ const Checkout = () => {
         details: error.details,
       });
 
+      haptic('error');
       toast.error(fields ? `${error.message} (${fields})` : error.message);
       setIsProcessing(false);
     }
@@ -134,13 +141,16 @@ const Checkout = () => {
   const next = () => {
     if (step === 1) {
       if (!selectedAddress) {
+        haptic('warning');
         toast.error('Pick a delivery address');
         return;
       }
+      haptic('select');
       setStep(2);
       return;
     }
     if (!selectedPayment) {
+      haptic('warning');
       toast.error('Pick a payment method');
       return;
     }
@@ -198,7 +208,7 @@ const Checkout = () => {
                     active ? 'bg-forest text-white' : done ? 'bg-brand-500 text-white' : 'bg-white/10'
                   )}
                 >
-                  {done ? <Check className="w-3 h-3" strokeWidth={3} /> : <Icon className="w-3 h-3" />}
+                  {done ? <Check className="w-3 h-3" /> : <Icon className="w-3 h-3" />}
                 </span>
                 {label}
               </button>

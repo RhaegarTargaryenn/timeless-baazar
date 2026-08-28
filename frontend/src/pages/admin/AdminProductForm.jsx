@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Trash2, Plus, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Plus, X, Loader2 } from '../../components/icons';
 import toast from 'react-hot-toast';
 
 import { api, paiseToRupees, rupeesToPaise } from '../../lib/api';

@@ -1,12 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-const AuthLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-surface-sunken">
-    <div className="w-8 h-8 border-[3px] border-brand-500 border-t-transparent rounded-full animate-spin" />
-  </div>
-);
+import { PageSkeleton } from './ui';
 
 /**
  * Gate a route behind sign-in.
@@ -23,7 +18,7 @@ const ProtectedRoute = ({ children }) => {
   const { isSignedIn, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <AuthLoader />;
+  if (loading) return <PageSkeleton />;
 
   if (!isSignedIn) {
     return <Navigate to="/login" replace state={{ from: location }} />;

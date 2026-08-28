@@ -179,6 +179,16 @@ router.post(
       const coupon = await Coupon.findOne({ code: couponCode });
       if (!coupon) throw new HttpError(400, 'That code is not valid.');
 
+      /*
+        A cancelled order does not count against the customer's uses.
+
+        This is the real reason cancellation had to exist. Without it, the shop
+        voiding a mistaken order by marking it "completed" would silently burn
+        the one use that customer had of the coupon -- they would be told the
+        code was already used, for an order that never happened.
+
+        The same count lives in routes/coupons.js; the two must stay in step.
+      */
       const usedByThisUser = await Order.countDocuments({
         userId: req.user.uid,
         'coupon.code': couponCode,
@@ -211,8 +221,8 @@ router.post(
       deliveryFee,
       total,
       coupon: couponSnapshot,
-      status: 'pending',
-      statusHistory: [{ status: 'pending', at: new Date(), note: 'Order placed' }],
+      status: 'placed',
+      statusHistory: [{ status: 'placed', at: new Date(), note: 'Order placed' }],
     });
 
     // The customer should not wait on Google, and a Sheets outage must not
@@ -274,19 +284,52 @@ router.get(
     const { status, page, limit } = req.valid.query;
     const filter = status ? { status } : {};
 
-    const [orders, total] = await Promise.all([
+    /**
+     * Counts come back with the page, for every status, not just the one being
+     * viewed.
+     *
+     * The admin screen's filter pills each carry a number. Deriving those from
+     * the returned page would be wrong the moment there is more than one page:
+     * the pills would count the fifty orders on screen rather than the whole
+     * book. One grouped count over the collection is cheap and always right.
+     */
+    const [orders, total, grouped] = await Promise.all([
       Order.find(filter)
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
       Order.countDocuments(filter),
+      Order.aggregate([{ $group: { _id: '$status', n: { $sum: 1 } } }]),
     ]);
 
-    res.json({ orders, total, page, limit });
+    // Always every status, so a pill that happens to have no orders still
+    // renders as "0" rather than vanishing from the row.
+    const counts = Object.fromEntries(ORDER_STATUSES.map((value) => [value, 0]));
+    let all = 0;
+    for (const row of grouped) {
+      if (row._id in counts) counts[row._id] = row.n;
+      all += row.n;
+    }
+
+    res.json({ orders, total, page, limit, counts: { ...counts, all } });
   })
 );
 
+/**
+ * PATCH /api/orders/:orderNumber/status — move an order between the two states.
+ *
+ * Both directions are allowed on purpose. Completing is one tap and the client
+ * will be doing it with one hand at a counter, so mis-taps are a question of
+ * when, not whether; making it one-way would mean the only fix for a slip is a
+ * database edit. The history keeps the record either way.
+ *
+ * `cancelled` is reachable the same way, and is reversible for the same reason:
+ * a cancel tapped by mistake must not need a database edit to undo. Reopening a
+ * cancelled order puts it back to `placed`, and because the coupon count
+ * excludes cancelled orders, that also correctly gives the customer their
+ * coupon use back.
+ */
 router.patch(
   '/:orderNumber/status',
   requireAdmin,
@@ -297,11 +340,15 @@ router.patch(
     })
   ),
   asyncHandler(async (req, res) => {
+    const { status, note } = req.valid.body;
+
     const order = await Order.findOneAndUpdate(
       { orderNumber: req.params.orderNumber },
       {
-        status: req.body.status,
-        $push: { statusHistory: { status: req.body.status, at: new Date(), note: req.body.note } },
+        status,
+        // `$push`, not a replace: the trail is the only record of who moved
+        // this order and when, and the customer's screen reads its timestamps.
+        $push: { statusHistory: { status, at: new Date(), note } },
       },
       { new: true }
     );

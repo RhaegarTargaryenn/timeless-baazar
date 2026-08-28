@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check } from './icons';
 
 import { EASE, spring, tap } from '../lib/motion';
 
@@ -97,7 +97,7 @@ const OrderAcceptedArt = () => (
         animate={{ scale: 1, opacity: 1 }}
         transition={{ ...spring.snappy, delay: 0.32 }}
       >
-        <Check className="w-[74px] h-[74px] text-white" strokeWidth={3.2} />
+        <Check className="w-[74px] h-[74px] text-white" />
       </motion.span>
     </motion.div>
   </div>

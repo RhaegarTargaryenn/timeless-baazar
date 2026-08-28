@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 
 import { useProducts } from '../hooks/useProducts';
 import ProductCard from '../components/ProductCard';
-import { MapPin, ArrowRight } from 'lucide-react';
+import { MapPin, ArrowRight } from '../components/icons';
 import { Skeleton, cx } from '../components/ui';
 import { gridContainer, instant, pageIn, spring, tap } from '../lib/motion';
 
@@ -162,7 +162,7 @@ const SectionHead = ({ title, to }) => (
         className="shrink-0 inline-flex items-center gap-1 text-[16px] font-semibold text-brand-600"
       >
         View All
-        <ArrowRight className="w-4 h-4" strokeWidth={2.4} />
+        <ArrowRight className="w-4 h-4" />
       </Link>
     )}
   </div>

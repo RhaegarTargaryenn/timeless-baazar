@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, NavLink } from 'react-router-dom';
-import { Search, ShoppingBag, Moon, Sun, LogOut, User, Shield } from 'lucide-react';
+import { Search, ShoppingBag, Moon, Sun, LogOut, User, Shield } from './icons';
 import toast from 'react-hot-toast';
 
 import useCartStore from '../store/cartStore';

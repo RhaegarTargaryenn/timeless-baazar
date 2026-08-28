@@ -16,7 +16,7 @@ import {
   Phone,
   Download,
   CheckCircle2,
-} from 'lucide-react';
+} from '../components/icons';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '../context/AuthContext';
@@ -65,7 +65,7 @@ const Row = ({ icon: Icon, label, onClick, expanded, expandable, children, tone 
     >
       <Icon
         className={cx('w-6 h-6 shrink-0', tone === 'brand' ? 'text-brand-600' : 'text-ink')}
-        strokeWidth={1.8}
+        weight="regular"
       />
       <span
         className={cx(
@@ -83,7 +83,7 @@ const Row = ({ icon: Icon, label, onClick, expanded, expandable, children, tone 
           )}
         />
       ) : (
-        <ChevronRight className="w-[18px] h-[18px] shrink-0 text-ink" strokeWidth={2.4} />
+        <ChevronRight className="w-[18px] h-[18px] shrink-0 text-ink" />
       )}
     </motion.button>
 
@@ -160,7 +160,7 @@ const Account = () => {
             aria-label="Go back"
             className="-ml-2.5 mb-4 w-10 h-10 flex items-center justify-center text-ink"
           >
-            <ChevronLeft className="w-6 h-6" strokeWidth={2.6} />
+            <ChevronLeft className="w-6 h-6" />
           </motion.button>
         )}
 
@@ -349,7 +349,7 @@ const Account = () => {
           onClick={handleSignOut}
           className="relative w-full h-[67px] rounded-[19px] bg-surface-sunken text-brand-600 text-[18px] font-semibold flex items-center justify-center"
         >
-          <LogOut className="absolute left-[46px] w-6 h-6" strokeWidth={2} />
+          <LogOut className="absolute left-[46px] w-6 h-6" />
           Log Out
         </motion.button>
       </div>

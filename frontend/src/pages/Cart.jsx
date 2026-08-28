@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Minus, Plus, X, ShoppingBag } from 'lucide-react';
+import { Minus, Plus, X, ShoppingBag } from '../components/icons';
 
 import useCartStore from '../store/cartStore';
 import { formatRupees } from '../lib/api';
@@ -65,7 +65,7 @@ const CartLine = ({ item }) => {
             aria-label={`Remove ${item.name}`}
             className="shrink-0 -mt-1 -mr-1 w-8 h-8 flex items-center justify-center text-ink-faint hover:text-coral transition-colors"
           >
-            <X className="w-[18px] h-[18px]" strokeWidth={2.2} />
+            <X className="w-[18px] h-[18px]" />
           </motion.button>
         </div>
 
@@ -82,7 +82,7 @@ const CartLine = ({ item }) => {
               aria-label="Reduce quantity"
               className="w-10 h-10 sm:w-[46px] sm:h-[46px] rounded-[17px] border border-line flex items-center justify-center text-ink-faint shrink-0"
             >
-              <Minus className="w-[18px] h-[18px]" strokeWidth={2.6} />
+              <Minus className="w-[18px] h-[18px]" />
             </motion.button>
 
             <motion.span
@@ -101,7 +101,7 @@ const CartLine = ({ item }) => {
               aria-label="Increase quantity"
               className="w-10 h-10 sm:w-[46px] sm:h-[46px] rounded-[17px] border border-line flex items-center justify-center text-brand-600 shrink-0"
             >
-              <Plus className="w-[18px] h-[18px]" strokeWidth={2.6} />
+              <Plus className="w-[18px] h-[18px]" />
             </motion.button>
           </div>
 
