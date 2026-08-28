@@ -11,12 +11,17 @@ import {
   ShieldCheck,
   ChevronRight,
   ChevronDown,
+  ChevronLeft,
   LogOut,
   Phone,
+  Download,
+  CheckCircle2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '../context/AuthContext';
+import { usePwaInstall } from '../lib/pwaInstall';
+import { useCanGoBack } from '../components/PageHeader';
 import { EASE, pageIn, tap } from '../lib/motion';
 import { cx } from '../components/ui';
 
@@ -38,6 +43,16 @@ import { cx } from '../components/ui';
  */
 
 const SHOP_PHONES = ['9266667069', '9654653719'];
+
+/** Where each browser hides its own install command, for when ours is absent. */
+const INSTALL_STEPS = {
+  ios: "In Safari, tap the Share button at the bottom, then choose 'Add to Home Screen'.",
+  android:
+    "In Chrome, open the ⋮ menu at the top right and choose 'Install app' (or 'Add to Home screen').",
+  desktop:
+    "In Chrome, click the install icon at the right of the address bar, or open the ⋮ menu and choose 'Install'.",
+  other: "Use your browser's menu and look for 'Install app' or 'Add to Home Screen'.",
+};
 
 /** One row: 24px glyph, 18px semibold label, chevron. */
 const Row = ({ icon: Icon, label, onClick, expanded, expandable, children, tone }) => (
@@ -98,6 +113,8 @@ const Divider = () => <div className="h-px bg-line -mx-[25px]" />;
 const Account = () => {
   const navigate = useNavigate();
   const { user, profile, isAdmin, signOut } = useAuth();
+  const { canInstall, isInstalled, promptInstall, platform } = usePwaInstall();
+  const canGoBack = useCanGoBack();
   const [openRow, setOpenRow] = useState(null);
 
   const toggle = (id) => setOpenRow((current) => (current === id ? null : id));
@@ -110,6 +127,12 @@ const Account = () => {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('');
+
+  const handleInstall = async () => {
+    const outcome = await promptInstall();
+    if (outcome === 'accepted') toast.success('Installing — look on your home screen');
+    if (outcome === 'unavailable') toggle('install');
+  };
 
   const handleSignOut = async () => {
     try {
@@ -124,7 +147,24 @@ const Account = () => {
   return (
     <motion.div {...pageIn} className="min-h-screen bg-surface flex flex-col">
       {/* ── Identity ─────────────────────────────────────────────────────── */}
-      <header className="px-[25px] pt-12 pb-8 flex items-center gap-5">
+      {/*
+        Account keeps its identity block rather than a title bar, so the chevron
+        sits above the avatar instead of beside it -- there is no room at the
+        left of a 64px portrait for a 40px hit target.
+      */}
+      <header className="px-[25px] pt-12 pb-8">
+        {canGoBack && (
+          <motion.button
+            whileTap={tap}
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+            className="-ml-2.5 mb-4 w-10 h-10 flex items-center justify-center text-ink"
+          >
+            <ChevronLeft className="w-6 h-6" strokeWidth={2.6} />
+          </motion.button>
+        )}
+
+        <div className="flex items-center gap-5">
         {user?.photoURL ? (
           <img
             src={user.photoURL}
@@ -143,6 +183,7 @@ const Account = () => {
         <div className="min-w-0">
           <h1 className="text-[20px] font-bold text-ink truncate">{name}</h1>
           {email && <p className="mt-1 text-[16px] text-ink-muted truncate">{email}</p>}
+          </div>
         </div>
       </header>
 
@@ -247,6 +288,36 @@ const Account = () => {
             Prices are set by the shop and can change — the total you are charged is always
             worked out fresh when the order is placed.
           </p>
+        </Row>
+
+        <Divider />
+
+        {/*
+          The permanent way in. The bottom-sheet nudge appears at most once per
+          browser, and iOS never offers a native prompt at all, so this row has
+          to stand on its own: it fires the real dialog when Chrome has given us
+          one, and otherwise expands onto where the browser keeps its own menu
+          item.
+        */}
+        <Row
+          icon={isInstalled ? CheckCircle2 : Download}
+          label={isInstalled ? 'App installed' : 'Install app'}
+          tone={isInstalled ? undefined : 'brand'}
+          expandable={!canInstall}
+          expanded={openRow === 'install'}
+          onClick={canInstall ? handleInstall : () => toggle('install')}
+        >
+          {isInstalled ? (
+            <p>You are already using the installed app. Nothing to do here.</p>
+          ) : (
+            <>
+              <p className="text-ink">{INSTALL_STEPS[platform]}</p>
+              <p className="mt-2 text-ink-faint">
+                It keeps the shop one tap away on your home screen and opens without the
+                browser bar.
+              </p>
+            </>
+          )}
         </Row>
 
         {isAdmin && (

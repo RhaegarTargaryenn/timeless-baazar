@@ -1,139 +1,106 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiX, HiDownload } from 'react-icons/hi';
+import { X, Download } from 'lucide-react';
+
+import { usePwaInstall } from '../lib/pwaInstall';
+import { EASE, tap } from '../lib/motion';
+
+/**
+ * The unprompted nudge to install the app.
+ *
+ * It appears at most once per browser: dismissing or installing writes
+ * `pwa-prompt-seen`, and nothing clears it. That is deliberate -- a storefront
+ * that re-asks on every visit is worse than one that asks once -- so the
+ * permanent way in is the "Install app" row on Account, which never hides.
+ *
+ * The prompt event itself is owned by `lib/pwaInstall`, not by this component;
+ * see the note there for why.
+ */
+
+const SEEN_KEY = 'pwa-prompt-seen';
 
 const PWAInstallPrompt = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const { canInstall, isInstalled, promptInstall } = usePwaInstall();
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    // Check if app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
-      return;
+    if (!canInstall || isInstalled) return undefined;
+
+    let seen = false;
+    try {
+      seen = localStorage.getItem(SEEN_KEY) === 'true';
+    } catch {
+      // Private mode can throw on read. Treat it as unseen.
     }
+    if (seen) return undefined;
 
-    // Listen for beforeinstallprompt event
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      
-      // Show prompt after 3 seconds
-      setTimeout(() => {
-        const hasSeenPrompt = localStorage.getItem('pwa-prompt-seen');
-        if (!hasSeenPrompt) {
-          setShowPrompt(true);
-        }
-      }, 3000);
-    };
+    // Let the page settle before covering part of it.
+    const timer = setTimeout(() => setShow(true), 3000);
+    return () => clearTimeout(timer);
+  }, [canInstall, isInstalled]);
 
-    window.addEventListener('beforeinstallprompt', handler);
-
-    // Listen for app installed event
-    window.addEventListener('appinstalled', () => {
-      setIsInstalled(true);
-      setShowPrompt(false);
-      console.log('✅ PWA installed successfully!');
-    });
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-    };
-  }, []);
+  const close = () => {
+    setShow(false);
+    try {
+      localStorage.setItem(SEEN_KEY, 'true');
+    } catch {
+      // Nothing to do -- the prompt simply reappears next visit.
+    }
+  };
 
   const handleInstall = async () => {
-    if (!deferredPrompt) {
-      return;
-    }
-
-    // Show install prompt
-    deferredPrompt.prompt();
-
-    // Wait for user choice
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      console.log('✅ User accepted the install prompt');
-    } else {
-      console.log('❌ User dismissed the install prompt');
-    }
-
-    setDeferredPrompt(null);
-    setShowPrompt(false);
-    localStorage.setItem('pwa-prompt-seen', 'true');
+    await promptInstall();
+    close();
   };
-
-  const handleDismiss = () => {
-    setShowPrompt(false);
-    localStorage.setItem('pwa-prompt-seen', 'true');
-  };
-
-  if (isInstalled || !showPrompt) {
-    return null;
-  }
 
   return (
     <AnimatePresence>
-      {showPrompt && (
+      {show && !isInstalled && (
         <motion.div
-          initial={{ y: 100, opacity: 0 }}
+          initial={{ y: 24, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-50"
+          exit={{ y: 24, opacity: 0 }}
+          transition={{ duration: 0.28, ease: EASE }}
+          role="dialog"
+          aria-label="Install Timeless Baazar"
+          className="fixed inset-x-4 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[360px] z-50"
         >
-          <div className="bg-forest">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                  <span className="text-2xl font-bold">TB</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">Install Timeless Baazar</h3>
-                  <p className="text-xs text-white/90">Get the app experience!</p>
-                </div>
+          <div className="rounded-[19px] bg-surface-raised border border-line shadow-xl p-5">
+            <div className="flex items-start gap-4">
+              <span className="w-12 h-12 shrink-0 rounded-[16px] bg-brand-50 flex items-center justify-center">
+                <Download className="w-6 h-6 text-brand-600" strokeWidth={2} />
+              </span>
+
+              <div className="min-w-0 flex-1">
+                <h2 className="text-[17px] font-bold text-ink">Install Timeless Baazar</h2>
+                <p className="mt-1 text-[14px] leading-[20px] text-ink-muted">
+                  Add the shop to your home screen — it opens straight to the shelves, no
+                  browser in the way.
+                </p>
               </div>
+
               <motion.button
-                whileHover={{ scale: 1.1, rotate: 90 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={handleDismiss}
-                className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                whileTap={tap}
+                onClick={close}
+                aria-label="Not now"
+                className="p-1 -m-1 shrink-0 text-ink-faint"
               >
-                <HiX className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </motion.button>
             </div>
 
-            <ul className="text-sm space-y-1.5 mb-4 text-white/95">
-              <li className="flex items-center gap-2">
-                <span className="text-yellow-300">✓</span>
-                <span>Works offline</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-yellow-300">✓</span>
-                <span>Fast loading</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-yellow-300">✓</span>
-                <span>Add to home screen</span>
-              </li>
-            </ul>
-
-            <div className="flex gap-2">
+            <div className="flex gap-3 mt-5">
               <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+                whileTap={tap}
                 onClick={handleInstall}
-                className="flex-1 bg-white text-brand-600 font-bold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                className="flex-1 h-[52px] rounded-[19px] bg-brand-600 text-white text-[16px] font-semibold"
               >
-                <HiDownload className="w-5 h-5" />
-                Install Now
+                Install
               </motion.button>
               <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={handleDismiss}
-                className="px-4 py-3 bg-white/10 backdrop-blur-sm rounded-xl font-semibold hover:bg-white/20 transition-colors"
+                whileTap={tap}
+                onClick={close}
+                className="h-[52px] px-5 rounded-[19px] bg-surface-sunken text-ink text-[16px] font-semibold"
               >
                 Later
               </motion.button>

@@ -49,6 +49,7 @@ const CartButton = () => {
 const ForestHeader = ({
   title,
   showBack = false,
+  onBack,
   showSearch = false,
   searchValue = '',
   onSearchChange,
@@ -65,7 +66,7 @@ const ForestHeader = ({
           {showBack && (
             <motion.button
               whileTap={tap}
-              onClick={() => navigate(-1)}
+              onClick={() => (onBack ? onBack() : navigate(-1))}
               aria-label="Back"
               className="shrink-0 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center"
             >

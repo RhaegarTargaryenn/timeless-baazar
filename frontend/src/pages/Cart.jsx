@@ -7,6 +7,7 @@ import useCartStore from '../store/cartStore';
 import { formatRupees } from '../lib/api';
 import { Price } from '../components/ProductCard';
 import { Button, EmptyState, cx } from '../components/ui';
+import PageHeader from '../components/PageHeader';
 import { pageIn, spring, tap, gridItem, gridContainer } from '../lib/motion';
 
 /**
@@ -116,9 +117,7 @@ const Cart = () => {
   return (
     <motion.div {...pageIn} className="min-h-screen bg-surface flex flex-col">
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <header className="pt-12 pb-5 border-b border-line">
-        <h1 className="text-center text-[20px] font-bold text-ink">My Cart</h1>
-      </header>
+      <PageHeader title="My Cart" />
 
       {items.length === 0 ? (
         <EmptyState

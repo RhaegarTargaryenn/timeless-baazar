@@ -145,9 +145,15 @@ const Checkout = () => {
   // ── Steps ────────────────────────────────────────────────────────────────
   return (
     <motion.div {...pageIn} className="min-h-screen bg-surface">
+      {/*
+        Back walks the steps before it leaves the flow -- on step 2 it returns
+        to the address, and only from step 1 does it drop out to wherever the
+        customer came from.
+      */}
       <ForestHeader
         title="Checkout"
-        showBack={false}
+        showBack
+        onBack={() => (step > 1 ? setStep(step - 1) : navigate(-1))}
         className="[&_h1]:text-white"
       >
         <div className="flex items-center gap-2 mt-5">

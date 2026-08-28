@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, SearchX, WifiOff, ChevronLeft, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SearchX, WifiOff, SlidersHorizontal, X } from 'lucide-react';
 
 import ProductCard from '../components/ProductCard';
 import { useProducts } from '../hooks/useProducts';
 import { Skeleton, EmptyState, Button, cx } from '../components/ui';
+import PageHeader from '../components/PageHeader';
 import { gridContainer, pageIn, spring, tap } from '../lib/motion';
 import { tintFor } from '../lib/categoryTints';
 
@@ -141,35 +142,31 @@ const Products = () => {
   return (
     <motion.div {...pageIn} className="min-h-screen bg-surface pb-32 sm:pb-10">
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <header className={cx('relative pt-12 pb-1', GUTTER)}>
-        {!browsing && (
-          <motion.button
-            whileTap={tap}
-            onClick={() => navigate('/products')}
-            aria-label="Back to categories"
-            className="absolute left-[15px] top-[42px] w-10 h-10 flex items-center justify-center text-ink"
-          >
-            <ChevronLeft className="w-6 h-6" strokeWidth={2.6} />
-          </motion.button>
-        )}
-
-        <h1 className="text-center text-[20px] font-bold text-ink truncate px-10">{title}</h1>
-
-        {!browsing && (
-          <motion.button
-            whileTap={tap}
-            onClick={() => setFilterOpen((open) => !open)}
-            aria-label="Filter by category"
-            aria-expanded={filterOpen}
-            className={cx(
-              'absolute right-[15px] top-[42px] w-10 h-10 flex items-center justify-center transition-colors',
-              filterOpen ? 'text-brand-600' : 'text-ink'
-            )}
-          >
-            <SlidersHorizontal className="w-[18px] h-[18px]" strokeWidth={2.2} />
-          </motion.button>
-        )}
-      </header>
+      {/*
+        Inside a category, back means the category grid -- not wherever history
+        happens to point, which after a filter change is the same screen again.
+      */}
+      <PageHeader
+        title={title}
+        onBack={browsing ? undefined : () => navigate('/products')}
+        className="pb-1"
+        right={
+          !browsing && (
+            <motion.button
+              whileTap={tap}
+              onClick={() => setFilterOpen((open) => !open)}
+              aria-label="Filter by category"
+              aria-expanded={filterOpen}
+              className={cx(
+                'w-10 h-10 flex items-center justify-center transition-colors',
+                filterOpen ? 'text-brand-600' : 'text-ink'
+              )}
+            >
+              <SlidersHorizontal className="w-[18px] h-[18px]" strokeWidth={2.2} />
+            </motion.button>
+          )
+        }
+      />
 
       {/*
         The filter is a category switcher, not a new faceted-search feature:

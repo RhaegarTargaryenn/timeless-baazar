@@ -14,10 +14,25 @@ import toast from 'react-hot-toast';
 
 import { useAuth } from '../context/AuthContext';
 import { api, formatRupees } from '../lib/api';
-import ForestHeader, { Sheet } from '../components/ForestHeader';
 import { Price } from '../components/ProductCard';
-import { Skeleton, EmptyState, Button, cx } from '../components/ui';
+import { Skeleton, EmptyState, Button, Badge, cx } from '../components/ui';
+import PageHeader from '../components/PageHeader';
 import { pageIn, spring, tap, gridItem, gridContainer, EASE } from '../lib/motion';
+
+/**
+ * Orders, and the journey of one of them.
+ *
+ * The design file has no orders screen, so this is built from the vocabulary
+ * the converted screens already share: a centred 20px title over a full-bleed
+ * hairline, a 25px gutter, and rows separated by hairlines rather than drawn as
+ * cards -- the same list grammar as My Cart (`1:1015`). It reads as one app
+ * with the order-accepted screen it is reached from, which the forest header it
+ * used to wear did not.
+ *
+ * One screen, two views: the list, and a detail that slides in over it. The
+ * detail is not a route of its own, so the browser back button leaves the
+ * screen entirely -- the chevron in the header is what returns to the list.
+ */
 
 /**
  * The delivery journey, in order.
@@ -40,14 +55,31 @@ const formatDate = (value) =>
     year: 'numeric',
   });
 
+/** Delivered reads as settled, cancelled as wrong, everything else as pending. */
+const statusTone = (status) => {
+  if (status === 'delivered') return 'brand';
+  if (status === 'cancelled') return 'red';
+  return 'amber';
+};
+
+const statusLabel = (status) =>
+  status === 'cancelled'
+    ? 'Cancelled'
+    : JOURNEY.find((stage) => stage.id === status)?.label ?? status;
+
+/** A heading inside the detail view, matching the 18px rows on Account. */
+const SubHeading = ({ children }) => (
+  <h2 className="text-[18px] font-semibold text-ink mb-3">{children}</h2>
+);
+
 const StatusTrail = ({ status }) => {
   if (status === 'cancelled') {
     return (
-      <div className="flex items-center gap-3 p-4 rounded-card bg-red-50 dark:bg-red-950/30">
-        <XCircle className="w-5 h-5 text-coral shrink-0" />
+      <div className="flex items-center gap-3 p-4 rounded-[19px] bg-surface-sunken">
+        <XCircle className="w-6 h-6 text-coral shrink-0" strokeWidth={2} />
         <div>
-          <p className="text-sm font-bold text-ink">Order cancelled</p>
-          <p className="text-xs text-ink-muted mt-0.5">
+          <p className="text-[16px] font-semibold text-ink">Order cancelled</p>
+          <p className="text-[14px] text-ink-muted mt-0.5">
             Call the shop if you think this is a mistake.
           </p>
         </div>
@@ -65,18 +97,18 @@ const StatusTrail = ({ status }) => {
         const Icon = stage.icon;
 
         return (
-          <div key={stage.id} className="flex gap-3 pb-5 last:pb-0">
+          <div key={stage.id} className="flex gap-4 pb-6 last:pb-0">
             <div className="relative flex flex-col items-center shrink-0">
               <motion.span
                 initial={{ scale: 0.6, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ ...spring.snappy, delay: index * 0.06 }}
                 className={cx(
-                  'w-9 h-9 rounded-full flex items-center justify-center',
+                  'w-10 h-10 rounded-full flex items-center justify-center',
                   done ? 'bg-brand-600 text-white' : 'bg-surface-sunken text-ink-faint'
                 )}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-[18px] h-[18px]" strokeWidth={2} />
               </motion.span>
 
               {/* The rail fills only as far as progress has reached */}
@@ -95,10 +127,10 @@ const StatusTrail = ({ status }) => {
               )}
             </div>
 
-            <div className="pt-1.5">
+            <div className="pt-2">
               <p
                 className={cx(
-                  'text-sm font-semibold',
+                  'text-[16px] font-semibold',
                   done ? 'text-ink' : 'text-ink-faint'
                 )}
               >
@@ -108,7 +140,7 @@ const StatusTrail = ({ status }) => {
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-xs text-brand-600 font-medium mt-0.5"
+                  className="text-[14px] text-brand-600 font-semibold mt-0.5"
                 >
                   Where your order is now
                 </motion.p>
@@ -121,44 +153,34 @@ const StatusTrail = ({ status }) => {
   );
 };
 
-const OrderCard = ({ order, onOpen }) => (
+/** One row in the list. Hairline-separated, as My Cart draws its lines. */
+const OrderRow = ({ order, onOpen }) => (
   <motion.button
     variants={gridItem}
     whileTap={tap}
     onClick={onOpen}
-    className="w-full text-left p-4 rounded-card bg-surface-raised border border-line"
+    className="w-full text-left py-[22px] border-b border-line flex items-center gap-4"
   >
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-sm font-bold text-ink font-mono tracking-wide">
+    <div className="min-w-0 flex-1">
+      <div className="flex items-center gap-2.5">
+        <p className="text-[16px] font-semibold text-ink font-mono tracking-wide truncate">
           {order.orderNumber}
         </p>
-        <p className="text-xs text-ink-faint mt-0.5">{formatDate(order.createdAt)}</p>
+        <Badge tone={statusTone(order.status)}>{statusLabel(order.status)}</Badge>
       </div>
-      <span
-        className={cx(
-          'shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold',
-          order.status === 'delivered' && 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400',
-          order.status === 'cancelled' && 'bg-red-50 text-coral dark:bg-red-950/40',
-          !['delivered', 'cancelled'].includes(order.status) &&
-            'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
-        )}
-      >
-        {JOURNEY.find((s) => s.id === order.status)?.label ?? order.status}
-      </span>
-    </div>
 
-    <div className="flex items-center justify-between gap-3 mt-3">
-      <p className="text-xs text-ink-muted truncate">
+      <p className="mt-1.5 text-[14px] text-ink-muted truncate">
         {order.items.length} item{order.items.length !== 1 ? 's' : ''} ·{' '}
         {order.items[0]?.name}
         {order.items.length > 1 && ` +${order.items.length - 1} more`}
       </p>
-      <span className="shrink-0 flex items-center gap-1 text-sm font-bold text-ink tabular">
-        {formatRupees(order.total)}
-        <ChevronRight className="w-4 h-4 text-ink-faint" />
-      </span>
+      <p className="mt-0.5 text-[13px] text-ink-faint">{formatDate(order.createdAt)}</p>
     </div>
+
+    <span className="shrink-0 flex items-center gap-1.5 text-[16px] font-semibold text-ink tabular">
+      {formatRupees(order.total)}
+      <ChevronRight className="w-[18px] h-[18px] text-ink-faint" strokeWidth={2.4} />
+    </span>
   </motion.button>
 );
 
@@ -193,15 +215,18 @@ const OrderTracking = () => {
 
   return (
     <motion.div {...pageIn} className="min-h-screen bg-surface">
-      <ForestHeader title={detail ? detail.orderNumber : 'My Orders'} showBack={Boolean(detail)}>
-        {!detail && orders.length > 0 && (
-          <p className="text-center text-xs text-white/55 mt-2">
-            {orders.length} order{orders.length !== 1 ? 's' : ''} so far
-          </p>
-        )}
-      </ForestHeader>
+      {/*
+        In the detail view back is a within-screen move to the list, so it is
+        handed an explicit handler; in the list it falls through to history,
+        which is what returns you to the order-accepted screen.
+      */}
+      <PageHeader
+        title={detail ? detail.orderNumber : 'Orders'}
+        titleClassName={detail ? 'font-mono tracking-wide' : undefined}
+        onBack={detail ? () => setOpenOrder(null) : undefined}
+      />
 
-      <Sheet className="px-4 pt-5 pb-36 sm:pb-8">
+      <div className="px-[25px] pb-[calc(8rem+env(safe-area-inset-bottom))] sm:pb-10">
         <AnimatePresence mode="wait">
           {detail ? (
             <motion.div
@@ -210,42 +235,36 @@ const OrderTracking = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -24 }}
               transition={{ duration: 0.24, ease: EASE }}
+              className="pt-7"
             >
-              <button
-                onClick={() => setOpenOrder(null)}
-                className="text-xs font-semibold text-brand-600 mb-4"
-              >
-                ← All orders
-              </button>
-
               <StatusTrail status={detail.status} />
 
-              <div className="mt-6">
-                <h2 className="text-sm font-bold text-ink mb-2.5">Items</h2>
-                <div className="space-y-2">
+              <div className="mt-9">
+                <SubHeading>Items</SubHeading>
+                <div className="space-y-2.5">
                   {detail.items.map((item, index) => (
                     <div
                       key={index}
-                      className="flex gap-3 p-3 rounded-2xl bg-surface-sunken"
+                      className="flex items-center gap-4 p-3 rounded-[19px] bg-surface-sunken"
                     >
-                      <div className="w-14 h-14 shrink-0 rounded-xl bg-surface-raised overflow-hidden">
+                      <div className="w-16 h-16 shrink-0 rounded-[14px] bg-surface-raised overflow-hidden">
                         {item.image ? (
                           <img src={item.image} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-lg opacity-30">
-                            🛒
+                          <div className="w-full h-full flex items-center justify-center text-ink-faint">
+                            <Package className="w-5 h-5" />
                           </div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-ink line-clamp-1">
+                        <p className="text-[16px] font-semibold text-ink line-clamp-1">
                           {item.name}
                         </p>
-                        <p className="text-xs text-ink-faint mt-0.5">
+                        <p className="text-[14px] text-ink-faint mt-0.5">
                           {item.variantLabel} × {item.quantity}
                         </p>
                       </div>
-                      <span className="text-sm font-bold text-ink tabular shrink-0">
+                      <span className="text-[16px] font-semibold text-ink tabular shrink-0">
                         {formatRupees(item.price * item.quantity)}
                       </span>
                     </div>
@@ -253,36 +272,38 @@ const OrderTracking = () => {
                 </div>
               </div>
 
-              <div className="mt-5 p-4 rounded-card bg-surface-sunken">
-                <div className="flex items-center justify-between text-sm">
+              <div className="mt-6 p-5 rounded-[19px] bg-surface-sunken">
+                <div className="flex items-center justify-between text-[16px]">
                   <span className="text-ink-muted">Subtotal</span>
                   <span className="font-semibold text-ink tabular">
                     {formatRupees(detail.subtotal)}
                   </span>
                 </div>
                 {detail.discount > 0 && (
-                  <div className="flex items-center justify-between text-sm mt-2 text-brand-700 dark:text-brand-400">
+                  <div className="flex items-center justify-between text-[16px] mt-2 text-brand-600">
                     <span>Discount{detail.coupon?.code ? ` (${detail.coupon.code})` : ''}</span>
                     <span className="font-semibold tabular">
                       −{formatRupees(detail.discount)}
                     </span>
                   </div>
                 )}
-                <div className="h-px bg-line my-3" />
+                <div className="h-px bg-line my-4" />
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-ink">Total</span>
-                  <Price paise={detail.total} className="text-lg" />
+                  <span className="text-[18px] font-semibold text-ink">Total</span>
+                  <Price paise={detail.total} className="text-[18px]" />
                 </div>
               </div>
 
-              <div className="mt-5 p-4 rounded-card bg-surface-sunken">
-                <p className="text-xs font-semibold text-ink-muted mb-1">Delivering to</p>
-                <p className="text-sm text-ink leading-relaxed">
+              <div className="mt-4 p-5 rounded-[19px] bg-surface-sunken">
+                <p className="text-[14px] font-semibold text-ink-muted mb-1.5">
+                  Delivering to
+                </p>
+                <p className="text-[16px] text-ink leading-relaxed">
                   {[detail.address?.street, detail.address?.street2, detail.address?.village]
                     .filter(Boolean)
                     .join(', ')}
                 </p>
-                <p className="text-xs text-ink-faint mt-0.5">
+                <p className="text-[14px] text-ink-faint mt-1">
                   {detail.address?.city}, {detail.address?.state} — {detail.address?.zipCode}
                 </p>
               </div>
@@ -294,9 +315,9 @@ const OrderTracking = () => {
                 )}`}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-5 w-full h-13 py-3.5 rounded-full bg-forest text-white font-bold flex items-center justify-center gap-2"
+                className="mt-8 w-full h-[67px] rounded-[19px] bg-brand-600 text-[#FFF9FF] text-[18px] font-semibold flex items-center justify-center gap-2.5"
               >
-                <MessageCircle className="w-4 h-4" />
+                <MessageCircle className="w-5 h-5" />
                 Ask about this order
               </motion.a>
             </motion.div>
@@ -308,9 +329,9 @@ const OrderTracking = () => {
               exit={{ opacity: 0 }}
             >
               {loading ? (
-                <div className="space-y-2.5">
+                <div className="pt-6 space-y-3">
                   {Array.from({ length: 3 }).map((_, index) => (
-                    <Skeleton key={index} className="h-24 rounded-card" />
+                    <Skeleton key={index} className="h-[92px] rounded-[19px]" />
                   ))}
                 </div>
               ) : orders.length === 0 ? (
@@ -325,10 +346,11 @@ const OrderTracking = () => {
                   variants={gridContainer}
                   initial="initial"
                   animate="animate"
-                  className="space-y-2.5"
+                  /* The last row's hairline would sit alone above the nav. */
+                  className="[&>button:last-child]:border-b-0"
                 >
                   {orders.map((order) => (
-                    <OrderCard
+                    <OrderRow
                       key={order.orderNumber}
                       order={order}
                       onOpen={() => setOpenOrder(order.orderNumber)}
@@ -339,7 +361,7 @@ const OrderTracking = () => {
             </motion.div>
           )}
         </AnimatePresence>
-      </Sheet>
+      </div>
     </motion.div>
   );
 };
