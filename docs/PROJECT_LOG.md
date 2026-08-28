@@ -1149,6 +1149,69 @@ watched it animate.
 
 ---
 
+## The success screen was never reachable  2026-08-28
+
+The client reported that placing an order showed only a toast. It was not the
+artwork and not the screen -- **`OrderAccepted` was mounting and being
+navigated away from in the same instant.**
+
+### The bug
+
+Checkout guards against an empty cart:
+
+```js
+if (items.length === 0 && !orderNumber) navigate('/cart', { replace: true });
+```
+
+Placing an order empties the cart, so the guard had to know an order had just
+been placed. It learned that from `orderNumber` -- and that is the bug, because
+the two updates land in **different React lanes**:
+
+- `clearCart()` is a Zustand write, which reaches React through
+  `useSyncExternalStore` at **sync** priority.
+- `setOrderNumber()` is ordinary state at **default** priority.
+
+Sync wins. There is one render in between where the cart is already empty and
+`orderNumber` is still `''`. The effect fired in that gap and replaced the route
+with `/cart` before the success screen could paint. The order was created, the
+success toast fired from the app-level `<Toaster>` and survived the navigation,
+and the customer landed on an empty cart having never seen the screen. Exactly
+"only a toast".
+
+**The fix is a ref**, written synchronously before `clearCart()`, so the
+in-between render already sees it and there is no gap to race.
+
+### Why it took two attempts
+
+The first fix looked like it had not worked. It had -- **the app was not being
+served by the dev server at all.** Port 3000 was running
+
+```
+vite preview --port 3000
+```
+
+which serves the static `frontend/build/` directory. Source edits do not appear
+there until `npm run build` is re-run, and the build on disk predated the fix.
+That also explains the client's "vo asset nhi kia": the new order-accepted
+artwork *was* committed, but the build they were clicking through was older than
+it, and the race meant they never reached the screen either way.
+
+Worth remembering: **if changes are not showing up, check whether :3000 is
+`npm run dev` or `npm run preview`.** They look identical in the browser.
+
+### Verified in a browser, properly
+
+Full order placed through the UI on a fresh build. The success screen renders:
+the designer's disc and inner ring, the tick, all three ribbons, all seven
+confetti dots, the headline, the order number (`TB-2808-0013`), the green
+**Track Order** pill and the plain **Back to home** beneath it.
+
+Also confirmed in passing: **the Devanagari renders** -- the cart showed
+"मिक्स पापड़" in Noto Sans Devanagari -- and the Phosphor tab icons and product
+cards all draw correctly.
+
+---
+
 ## Resume here
 
 Running locally needs both:

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ArrowRight, Tag, X, MapPin, Wallet } from '../components/icons';
@@ -39,9 +39,28 @@ const Checkout = () => {
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
 
+  /**
+   * An order has been placed. A ref, not state, and that is the whole point.
+   *
+   * The guard below sends an empty cart back to /cart. Placing an order empties
+   * the cart, so the guard has to know not to fire -- and it cannot learn that
+   * from `orderNumber`, because the two updates land in different React lanes.
+   * `clearCart()` is a Zustand store write, which reaches React through
+   * `useSyncExternalStore` at **sync** priority; `setOrderNumber` is ordinary
+   * state at **default** priority. Sync wins, so there is one render in between
+   * where the cart is already empty and `orderNumber` is still ''. The effect
+   * ran in that gap and replaced the route with /cart before the success screen
+   * could mount -- the order was created, the toast fired, and the customer was
+   * dropped on an empty cart having never seen it.
+   *
+   * A ref is written synchronously and is visible to that in-between render, so
+   * there is no gap to race.
+   */
+  const orderPlaced = useRef(false);
+
   useEffect(() => {
-    if (items.length === 0 && !orderNumber) navigate('/cart', { replace: true });
-  }, [items, orderNumber, navigate]);
+    if (items.length === 0 && !orderPlaced.current) navigate('/cart', { replace: true });
+  }, [items, navigate]);
 
   // All paise. Indicative — the server recomputes every figure from its own
   // catalogue when the order is placed.
@@ -103,6 +122,9 @@ const Checkout = () => {
         paymentMethod: 'cod',
       });
 
+      // Before clearCart(), always: the guard above reads this ref during the
+      // render that Zustand's sync update triggers.
+      orderPlaced.current = true;
       setOrderNumber(order.orderNumber);
       clearCart();
       // The one pattern the customer is meant to notice. This is the moment the
