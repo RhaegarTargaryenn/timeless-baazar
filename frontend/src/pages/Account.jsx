@@ -152,7 +152,7 @@ const Account = () => {
         sits above the avatar instead of beside it -- there is no room at the
         left of a 64px portrait for a 40px hit target.
       */}
-      <header className="px-[25px] pt-12 pb-8">
+      <header className="px-[25px] pt-[max(3rem,calc(env(safe-area-inset-top)+0.75rem))] pb-8">
         {canGoBack && (
           <motion.button
             whileTap={tap}
@@ -187,7 +187,14 @@ const Account = () => {
         </div>
       </header>
 
-      <Divider />
+      {/*
+        Already full width, so this one is a plain rule. `Divider` cancels the
+        25px gutter with a negative margin, which outside that gutter has
+        nothing to cancel -- it hung 25px past the right edge and gave the whole
+        page a horizontal scroll, which in the installed app reads as a
+        too-wide screen you have to pinch out of.
+      */}
+      <div className="h-px bg-line" />
 
       <div className="px-[25px]">
         <Row icon={ShoppingBag} label="Orders" onClick={() => navigate('/track-order')} />

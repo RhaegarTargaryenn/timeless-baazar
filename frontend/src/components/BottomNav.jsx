@@ -1,22 +1,26 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 import useCartStore from '../store/cartStore';
-import { spring, tap } from '../lib/motion';
+import { instant, spring, tap } from '../lib/motion';
 import { Store, LayoutGrid, ShoppingCart, Receipt, User } from 'lucide-react';
 import { cx } from './ui';
 
 /**
- * The bottom bar from the Figma source (node 1:252).
+ * The floating navigation pill.
  *
- * A full-width white shelf with a 15px top radius and a wide, very soft upward
- * shadow -- not the floating pill this app carried before. Icons sit at 24px
- * with a 12px semibold label beneath; the active tab is simply recoloured to
- * brand green, which is the whole of the design's active treatment.
+ * A glass bar that hovers above the page rather than the full-width shelf the
+ * Figma file drew: translucent, blurred, with a hairline and a soft drop
+ * shadow, so the content scrolling underneath stays half-visible through it.
  *
- * Five tabs, as the design draws. The design's fifth is Favourite; this app has
- * no favourites, so Orders takes that slot -- every tab goes somewhere real.
+ * The selected tab is a solid brand-green disc with a white glyph and label
+ * inside it, and that disc is a single shared element -- `layoutId` moves it
+ * between tabs instead of fading one out and another in, the same trick the
+ * category strip on Home uses and the same spring the Add button rides.
+ *
+ * Five tabs. The design's fifth is Favourite; this app has no favourites, so
+ * Orders takes that slot -- every tab goes somewhere real.
  */
 const TABS = [
   { to: '/', label: 'Shop', Icon: Store, end: true },
@@ -31,42 +35,86 @@ const BottomNav = () => {
     state.items.reduce((sum, item) => sum + item.quantity, 0)
   );
 
+  const reduced = useReducedMotion();
+  const layoutTransition = reduced ? instant : spring.layout;
+
   return (
     <nav
-      className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-surface-raised rounded-t-[15px] shadow-shelf"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      /*
+        Inset from the edges so it reads as floating. The bottom offset carries
+        the home-indicator inset on top of its own gap -- `viewport-fit=cover`
+        is what makes that inset resolve to anything.
+      */
+      className="sm:hidden fixed inset-x-3 z-40 bottom-[calc(0.75rem+env(safe-area-inset-bottom))]"
     >
-      <ul className="flex items-stretch">
+      <ul
+        className={cx(
+          'flex items-stretch gap-1 p-1.5 rounded-full',
+          // Glass: a translucent ground, blurred, lifted by a hairline and a
+          // shadow. `supports` keeps it opaque where backdrop-filter is absent,
+          // because half-transparent over unblurred text is unreadable.
+          'bg-surface-raised/70 backdrop-blur-xl backdrop-saturate-150',
+          'supports-[not(backdrop-filter:blur(0))]:bg-surface-raised',
+          // A white hairline on a white bar is invisible; the light theme needs
+          // the ordinary rule, and only the dark one wants the bright edge.
+          'border border-line dark:border-white/10',
+          'shadow-[0_8px_32px_rgba(13,59,44,0.18)]'
+        )}
+      >
         {TABS.map(({ to, label, Icon, end, badge }) => (
           <li key={to} className="flex-1">
-            <NavLink
-              to={to}
-              end={end}
-              className="flex flex-col items-center justify-center gap-1 pt-3 pb-2.5"
-            >
+            <NavLink to={to} end={end} className="block">
               {({ isActive }) => (
                 <motion.span
                   whileTap={tap}
-                  className={cx(
-                    'flex flex-col items-center gap-1 transition-colors',
-                    isActive ? 'text-brand-600' : 'text-ink'
-                  )}
+                  className="relative flex flex-col items-center justify-center gap-0.5 h-[54px] rounded-full"
                 >
+                  {/*
+                    One disc for the whole bar, not one per tab: Framer moves
+                    this node to whichever tab owns it, so it slides.
+                  */}
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-pill"
+                      transition={layoutTransition}
+                      aria-hidden="true"
+                      className="absolute inset-0 rounded-full bg-brand-600 shadow-[0_4px_12px_rgba(83,177,117,0.45)]"
+                    />
+                  )}
+
                   <span className="relative flex h-6 items-center">
-                    <Icon className="w-6 h-6" strokeWidth={2} />
+                    <Icon
+                      className={cx('w-[22px] h-[22px]', isActive ? 'text-white' : 'text-ink')}
+                      strokeWidth={2}
+                    />
+
                     {badge && count > 0 && (
                       <motion.span
                         key={count}
                         initial={{ scale: 0.4, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={spring.snappy}
-                        className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-coral text-white text-[10px] font-bold flex items-center justify-center"
+                        className={cx(
+                          'absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full',
+                          'text-[10px] font-bold flex items-center justify-center',
+                          // On the green disc a green badge would vanish, so it
+                          // flips to white-on-green there.
+                          isActive ? 'bg-white text-brand-700' : 'bg-coral text-white'
+                        )}
                       >
                         {count > 9 ? '9+' : count}
                       </motion.span>
                     )}
                   </span>
-                  <span className="text-[11px] sm:text-[12px] font-semibold leading-none">{label}</span>
+
+                  <span
+                    className={cx(
+                      'relative text-[10px] font-semibold leading-none',
+                      isActive ? 'text-white' : 'text-ink-muted'
+                    )}
+                  >
+                    {label}
+                  </span>
                 </motion.span>
               )}
             </NavLink>

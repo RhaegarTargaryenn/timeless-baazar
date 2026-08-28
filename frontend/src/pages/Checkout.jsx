@@ -104,9 +104,29 @@ const Checkout = () => {
       clearCart();
       toast.success('Order placed!');
     } catch (error) {
-      // A 409 means the catalogue moved under the customer — something went out
-      // of stock, or a price changed — so show what the server actually said.
-      toast.error(error.message);
+      /*
+        Show what the server actually said, fields included.
+
+        A 409 means the catalogue moved under the customer -- something went out
+        of stock, or a price changed. A 400 comes back as the bare sentence
+        "Some fields need fixing." with the offending fields in `details`, and
+        the toast used to throw those away: the one case where the customer is
+        genuinely stuck was also the one where nothing on screen said why.
+
+        The full error goes to the console too, status and all, so a failure can
+        be read off a phone plugged into a laptop without guessing.
+      */
+      const fields = Array.isArray(error.details)
+        ? error.details.map((detail) => `${detail.field}: ${detail.message}`).join(', ')
+        : '';
+
+      console.error('[checkout] order failed', {
+        status: error.status,
+        message: error.message,
+        details: error.details,
+      });
+
+      toast.error(fields ? `${error.message} (${fields})` : error.message);
       setIsProcessing(false);
     }
   };

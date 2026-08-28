@@ -33,16 +33,21 @@ const CartLine = ({ item }) => {
       layout
       exit={{ opacity: 0, x: -40, transition: { duration: 0.18 } }}
       transition={spring.layout}
-      className="flex gap-4 py-[30px] border-b border-line"
+      className="flex gap-3 sm:gap-4 py-[30px] border-b border-line"
     >
-      {/* The photo floats; the design gives it no tile of its own. */}
-      <div className="w-[85px] shrink-0 flex items-center justify-center">
+      {/*
+        The photo floats; the design gives it no tile of its own. It narrows
+        below `sm`: the design's 85px plus the 46px stepper and the line total
+        needs 355px of room, and a 320px phone does not have it -- the row spilled
+        past the right edge and gave the page a horizontal scroll.
+      */}
+      <div className="w-[64px] sm:w-[85px] shrink-0 flex items-center justify-center">
         {item.image ? (
           <img
             src={item.image}
             alt=""
             loading="lazy"
-            className="max-w-full max-h-[85px] object-contain"
+            className="max-w-full max-h-[64px] sm:max-h-[85px] object-contain"
           />
         ) : (
           <div className="text-3xl opacity-30">🛒</div>
@@ -75,7 +80,7 @@ const CartLine = ({ item }) => {
               whileTap={tap}
               onClick={() => updateQuantity(item.productId, item.variantId, item.quantity - 1)}
               aria-label="Reduce quantity"
-              className="w-[46px] h-[46px] rounded-[17px] border border-line flex items-center justify-center text-ink-faint"
+              className="w-10 h-10 sm:w-[46px] sm:h-[46px] rounded-[17px] border border-line flex items-center justify-center text-ink-faint shrink-0"
             >
               <Minus className="w-[18px] h-[18px]" strokeWidth={2.6} />
             </motion.button>
@@ -85,7 +90,7 @@ const CartLine = ({ item }) => {
               initial={{ y: -6, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={spring.snappy}
-              className="w-[42px] text-center text-[16px] font-semibold text-ink tabular"
+              className="w-[34px] sm:w-[42px] text-center text-[16px] font-semibold text-ink tabular"
             >
               {item.quantity}
             </motion.span>
@@ -94,13 +99,16 @@ const CartLine = ({ item }) => {
               whileTap={tap}
               onClick={() => updateQuantity(item.productId, item.variantId, item.quantity + 1)}
               aria-label="Increase quantity"
-              className="w-[46px] h-[46px] rounded-[17px] border border-line flex items-center justify-center text-brand-600"
+              className="w-10 h-10 sm:w-[46px] sm:h-[46px] rounded-[17px] border border-line flex items-center justify-center text-brand-600 shrink-0"
             >
               <Plus className="w-[18px] h-[18px]" strokeWidth={2.6} />
             </motion.button>
           </div>
 
-          <Price paise={item.price * item.quantity} className="text-[18px] tracking-[0.1px]" />
+          <Price
+            paise={item.price * item.quantity}
+            className="shrink-0 text-[16px] sm:text-[18px] tracking-[0.1px]"
+          />
         </div>
       </div>
     </motion.div>

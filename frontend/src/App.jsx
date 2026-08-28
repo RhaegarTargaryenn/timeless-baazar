@@ -59,13 +59,22 @@ const OWN_HEADER = [
 ];
 
 /**
- * Checkout hides the bottom nav.
+ * Where the nav does not belong.
  *
- * It is a focused flow -- offering a way to wander off mid-payment is wrong on
- * its own, and on the order-accepted screen the nav sits right on top of the
- * "Back to home" button.
+ * Checkout is a focused flow -- offering a way to wander off mid-payment is
+ * wrong on its own, and on the order-accepted screen the bar would sit right
+ * on top of the "Back to home" button.
+ *
+ * Login and Signup are the other case. Three of the five tabs there lead
+ * somewhere that immediately bounces back to the very screen you are standing
+ * on, because they are behind `ProtectedRoute` -- a bar of buttons that return
+ * you to where you already are is worse than no bar.
+ *
+ * Everywhere else keeps it, including the sub-pages: Delivery Address is
+ * reached from Account and Orders' detail view is not a route of its own, so
+ * in both places the tabs are still the way out.
  */
-const NO_NAV = ['/checkout'];
+const NO_NAV = ['/checkout', '/login', '/signup'];
 
 const StorefrontShell = ({ children }) => {
   const { pathname } = useLocation();

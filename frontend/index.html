@@ -3,7 +3,15 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!--
+    `viewport-fit=cover` is what makes env(safe-area-inset-*) resolve to
+    anything but 0. Ten places in the app pad themselves with those insets --
+    the bottom nav, the sheets, the order-accepted actions -- and without
+    this every one of them was quietly padding by zero in the installed app.
+
+    No maximum-scale and no user-scalable=no: pinch-zoom stays available.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#16A34A" />

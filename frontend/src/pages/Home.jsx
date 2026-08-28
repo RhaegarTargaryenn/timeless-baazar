@@ -1,13 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 import { useProducts } from '../hooks/useProducts';
 import ProductCard from '../components/ProductCard';
-import { Search, MapPin, ArrowRight } from 'lucide-react';
+import { MapPin, ArrowRight } from 'lucide-react';
 import { Skeleton, cx } from '../components/ui';
-import { gridContainer, pageIn, spring, tap } from '../lib/motion';
-import { tintFor } from '../lib/categoryTints';
+import { gridContainer, instant, pageIn, spring, tap } from '../lib/motion';
 
 /**
  * Home.
@@ -51,6 +50,101 @@ const CATEGORY_EMOJI = {
 const GUTTER = 'px-[25px]';
 
 /**
+ * Festival banners.
+ *
+ * Artwork the shop supplies, not something drawn here -- each one is a finished
+ * composition carrying its own headline and call to action, so the card adds no
+ * text of its own. `to` is where tapping it goes.
+ *
+ * Add a second entry to run two; the dots appear on their own once there is
+ * something to page between, and stay hidden while there is only this.
+ */
+const BANNERS = [
+  {
+    id: 'raksha-bandhan',
+    alt: 'Happy Raksha Bandhan from Timeless Bazar — celebrate the bond of love with pure and fresh ingredients',
+    webp: '/design/banners/raksha-bandhan-750.webp',
+    webpLarge: '/design/banners/raksha-bandhan-1200.webp',
+    jpg: '/design/banners/raksha-bandhan-1200.jpg',
+    to: '/products',
+  },
+];
+
+/**
+ * The banner strip.
+ *
+ * A scroll-snapping track, one card per banner. This is the one place on the
+ * page a sideways gesture belongs -- a banner is one thing at a time by
+ * definition -- and being a single row it cannot swallow a downward flick the
+ * way the design's three stacked rails did.
+ *
+ * The artwork is 1774x887 and the card holds that ratio exactly, so nothing is
+ * cropped: the headline sits at the left of the image and any crop eats it.
+ */
+const FestiveBanner = ({ navigateTo }) => {
+  const [active, setActive] = React.useState(0);
+
+  // Which card is under the thumb, from how far the track has scrolled.
+  const onScroll = (event) => {
+    const { scrollLeft, clientWidth } = event.currentTarget;
+    setActive(Math.round(scrollLeft / clientWidth));
+  };
+
+  return (
+    <div className="mt-5">
+      <div
+        onScroll={onScroll}
+        className={cx(
+          'flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide',
+          GUTTER
+        )}
+      >
+        {BANNERS.map((banner) => (
+          <motion.button
+            key={banner.id}
+            whileTap={tap}
+            onClick={() => navigateTo(banner.to)}
+            className="snap-center shrink-0 w-full rounded-[15px] overflow-hidden bg-surface-sunken"
+          >
+            <picture>
+              <source
+                type="image/webp"
+                srcSet={`${banner.webp} 750w, ${banner.webpLarge} 1200w`}
+                sizes="(min-width: 640px) 640px, 100vw"
+              />
+              <img
+                src={banner.jpg}
+                alt={banner.alt}
+                width={1774}
+                height={887}
+                /* Eager, not lazy: this is the first thing on the page, and a
+                   lazy hero flashes an empty box on arrival. */
+                loading="eager"
+                className="w-full h-auto aspect-[1774/887] object-cover"
+              />
+            </picture>
+          </motion.button>
+        ))}
+      </div>
+
+      {BANNERS.length > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-3">
+          {BANNERS.map((banner, index) => (
+            <span
+              key={banner.id}
+              className={cx(
+                'h-1.5 rounded-full transition-all duration-300',
+                index === active ? 'w-4 bg-brand-600' : 'w-1.5 bg-line'
+              )}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * Four products, not the design's eight.
  *
  * Four fills exactly two rows of two on a phone, which is the most that fits
@@ -63,13 +157,16 @@ const SectionHead = ({ title, to }) => (
   <div className={cx('flex items-center justify-between gap-3', GUTTER)}>
     <h2 className="text-[24px] font-semibold text-ink">{title}</h2>
     {to && (
-      <Link to={to} className="shrink-0 text-[16px] font-semibold text-brand-600">
-        See all
+      <Link
+        to={to}
+        className="shrink-0 inline-flex items-center gap-1 text-[16px] font-semibold text-brand-600"
+      >
+        View All
+        <ArrowRight className="w-4 h-4" strokeWidth={2.4} />
       </Link>
     )}
   </div>
 );
-
 /**
  * Products, two across on a phone and wider up the breakpoints.
  *
@@ -110,130 +207,160 @@ const ProductGrid = ({ products, loading }) => {
 };
 
 /**
- * The category tiles.
+ * The category strip.
  *
- * Three across, square, photo over label. The design laid these out as 248px
- * cards in a side-scrolling row, which hid four of the six shop departments
- * off the right edge -- the worst thing to hide, since this is how someone who
- * knows what they came for gets there. Three-up puts all six on screen in two
- * rows, inside the height one 248px card used to occupy.
+ * One wide pill holding every department side by side, with a white card that
+ * slides to whichever is selected. The slide comes from a shared `layoutId`
+ * under `spring.layout` -- the same motion the Add button uses when it morphs
+ * into a quantity stepper, so the two read as one language rather than two.
+ *
+ * This replaces a grid of six large squares. That grid pushed the products
+ * themselves below the fold and a tap left the page; here the whole shop fits
+ * on one line and a tap swaps the grid underneath, so comparing two
+ * departments costs two taps rather than two page loads.
+ *
+ * "All" leads: arriving at a shop already filtered to daal would be wrong.
  */
-const CategoryGrid = ({ categories, loading, navigateTo }) => (
-  <div
-    className={cx(
-      'grid grid-cols-3 gap-[13px] sm:grid-cols-4 lg:grid-cols-6',
-      GUTTER,
-      'pt-[15px]'
-    )}
-  >
-    {loading
-      ? Array.from({ length: 6 }).map((_, index) => (
-          <Skeleton key={index} className="aspect-square rounded-card" />
-        ))
-      : categories.map((category, index) => (
-          <motion.button
-            key={category._id}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...spring.snappy, delay: index * 0.04 }}
-            whileTap={tap}
-            onClick={() => navigateTo(`/products?category=${category.slug}`)}
-            className="relative aspect-square rounded-card overflow-hidden flex flex-col items-center justify-center gap-1.5 p-2"
-          >
-            {/*
-              The tint is a 15% wash of a solid hue, exactly as the design
-              builds it — a separate layer rather than an alpha colour, so the
-              label above it stays at full contrast.
-            */}
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 opacity-15"
-              style={{ backgroundColor: tintFor(index).hue }}
-            />
+const CategoryPills = ({ categories, loading, active, onSelect }) => {
+  const reduced = useReducedMotion();
 
-            <span className="relative w-[46px] h-[46px] shrink-0 flex items-center justify-center">
-              {category.image ? (
-                <img
-                  src={category.image}
-                  alt=""
-                  loading="lazy"
-                  className="max-w-full max-h-full object-contain"
+  // Framer still runs layout animations under reduced motion, which is the
+  // thing someone with vestibular sensitivity is usually trying to avoid.
+  const layoutTransition = reduced ? instant : spring.layout;
+
+  if (loading) {
+    return (
+      <div className={cx('mt-5', GUTTER)}>
+        <Skeleton className="h-[78px] rounded-[22px]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={cx('mt-5', GUTTER)}>
+      <div
+        role="tablist"
+        aria-label="Shop by category"
+        className="flex gap-1 p-1.5 rounded-[22px] bg-surface-sunken overflow-x-auto scrollbar-hide"
+      >
+        {categories.map((chip) => {
+          const selected = chip.slug === active;
+
+          return (
+            <motion.button
+              key={chip._id}
+              role="tab"
+              aria-selected={selected}
+              whileTap={tap}
+              onClick={() => onSelect(chip.slug)}
+              className="relative shrink-0 w-[82px] py-2.5 flex flex-col items-center gap-1.5"
+            >
+              {/*
+                One element shared across every chip, not one per chip: Framer
+                moves this single node to whichever chip owns it instead of
+                cross-fading two copies, and that is what makes it slide.
+              */}
+              {selected && (
+                <motion.span
+                  layoutId="category-pill"
+                  transition={layoutTransition}
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-[17px] bg-surface-raised shadow-sm"
                 />
-              ) : (
-                <span className="text-3xl">{CATEGORY_EMOJI[category.slug] ?? '🛒'}</span>
               )}
-            </span>
 
-            <span className="relative text-[12px] font-semibold text-[#3E423F] dark:text-ink text-center leading-tight line-clamp-2">
-              {category.name}
-            </span>
-          </motion.button>
-        ))}
-  </div>
-);
+              <span className="relative w-10 h-10 flex items-center justify-center">
+                {chip.image ? (
+                  <img
+                    src={chip.image}
+                    alt=""
+                    loading="lazy"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                ) : (
+                  <span className="text-[32px] leading-none">
+                    {CATEGORY_EMOJI[chip.slug] ?? '🛒'}
+                  </span>
+                )}
+              </span>
+
+              <span
+                className={cx(
+                  'relative text-[11px] font-semibold text-center leading-tight line-clamp-1 transition-colors',
+                  selected ? 'text-brand-600' : 'text-ink-muted'
+                )}
+              >
+                {chip.name}
+              </span>
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 /**
- * The promo, built from the shop's own photographs.
+ * The promo band.
  *
- * This replaces the illustrated banner the Figma file supplied. That drawing
- * was generic produce -- vegetables this shop does not sell, since it is a
- * dry-goods grocer of dal, rice, flour and spice. These are the photographs
- * already on the category tiles, so the promo shows what is actually on the
- * shelves, and it costs no new asset.
+ * One photograph of a bag packed with what this shop actually sells -- rice,
+ * dal, sooji, gur -- against a wash of brand green, with the invitation at the
+ * left. It replaces a card that showed three thumbnails lifted off the category
+ * tiles above it: the same pictures twice on one screen, which read as filler.
  *
- * It also sits below the products rather than above them. A banner at the top
- * is the first thing a returning customer scrolls past; here it reads as an
- * invitation to carry on once the four products have run out.
+ * The photograph is a genuine cut-out (two thirds of its pixels are fully
+ * transparent), so it sits on the tint with no white box around it -- which is
+ * the whole reason it can bleed off the card's edge instead of living in a
+ * frame of its own.
+ *
+ * It stays below the products rather than above them. A banner at the top is
+ * the first thing a returning customer scrolls past; here it reads as an
+ * invitation to carry on once the row above has run out.
  */
-const PromoBanner = ({ categories, loading, navigateTo }) => (
+const PromoBanner = ({ navigateTo }) => (
   <div className={GUTTER}>
     <motion.button
       whileTap={tap}
       onClick={() => navigateTo('/products')}
-      className="w-full rounded-card bg-brand-50 dark:bg-brand-900/20 p-5 text-left"
+      className="relative w-full overflow-hidden rounded-card bg-brand-50 dark:bg-brand-900/20 text-left"
     >
-      <div className="flex gap-2.5">
-        {loading
-          ? Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="flex-1 aspect-square rounded-xl" />
-            ))
-          : categories.slice(0, 3).map((category, index) => (
-              <span
-                key={category._id}
-                className="relative flex-1 aspect-square rounded-xl overflow-hidden flex items-center justify-center p-2.5 bg-surface-raised"
-              >
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-0 opacity-15"
-                  style={{ backgroundColor: tintFor(index).hue }}
-                />
-                {category.image ? (
-                  <img
-                    src={category.image}
-                    alt=""
-                    loading="lazy"
-                    className="relative max-w-full max-h-full object-contain"
-                  />
-                ) : (
-                  <span className="relative text-3xl">
-                    {CATEGORY_EMOJI[category.slug] ?? '🛒'}
-                  </span>
-                )}
-              </span>
-            ))}
-      </div>
-
-      <p className="mt-4 text-[20px] font-bold text-ink leading-tight">Everyday grocery</p>
-      <p className="mt-1 text-[14px] font-medium text-brand-600">Delivered to your door</p>
-
       {/*
-        A span, not a nested button — the whole card is already the control,
-        and a button inside a button is invalid and swallows the outer tap.
+        The bag bleeds off the bottom-right corner. It is sized in percentages
+        so the composition holds from a 320px phone to the 5xl column cap,
+        rather than snapping at a breakpoint.
       */}
-      <span className="mt-4 inline-flex items-center gap-1.5 h-11 px-5 rounded-full bg-brand-600 text-white text-[14px] font-semibold">
-        Shop all
-        <ArrowRight className="w-4 h-4" />
-      </span>
+      <picture>
+        <source
+          type="image/webp"
+          srcSet="/design/bag-420.webp 420w, /design/bag-700.webp 700w"
+          sizes="(min-width: 640px) 320px, 50vw"
+        />
+        <img
+          src="/design/bag-700.png"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          width={700}
+          height={467}
+          className="absolute right-[-4%] bottom-[-6%] w-[52%] max-w-[320px] object-contain"
+        />
+      </picture>
+
+      <div className="relative w-[55%] py-7 pl-6 pr-2">
+        <p className="text-[20px] font-bold leading-tight text-ink">Everyday grocery</p>
+        <p className="mt-1 text-[14px] font-medium text-brand-600">
+          Delivered to your door
+        </p>
+
+        {/*
+          A span, not a nested button -- the whole card is already the control,
+          and a button inside a button is invalid and swallows the outer tap.
+        */}
+        <span className="mt-5 inline-flex items-center gap-1.5 h-11 px-5 rounded-full bg-brand-600 text-white text-[14px] font-semibold">
+          Shop all
+          <ArrowRight className="w-4 h-4" />
+        </span>
+      </div>
     </motion.button>
   </div>
 );
@@ -243,65 +370,88 @@ const Home = () => {
   const { products, categories, loading } = useProducts();
 
   /**
-   * The one product section, from the whole catalogue.
+   * Which chip in the strip is lit.
    *
-   * Nothing is curated yet and the API has no "featured" flag, so the pick is
-   * derived: anything the shop gave a real list price to is genuinely marked
-   * down and leads, and the rest follows.
+   * Null until someone chooses, and the first department stands in -- the
+   * categories arrive from the API, so there is nothing to name at first
+   * render. Storing the fallback in state instead would mean writing state
+   * from inside an effect and rendering one empty frame before it lands.
    */
-  const bestSelling = useMemo(() => {
-    const discounted = products.filter((product) =>
-      product.variants?.some((variant) => variant.mrp != null && variant.mrp > variant.price)
-    );
-    const rest = products.filter((product) => !discounted.includes(product));
+  const [chosenCategory, setChosenCategory] = useState(null);
+  const activeCategory = chosenCategory ?? categories[0]?.slug ?? null;
 
-    return [...discounted, ...rest].slice(0, PER_SECTION);
-  }, [products]);
+  /**
+   * The one product section: whatever is under the lit chip.
+   *
+   * Capped at four, which fills two rows of two on a phone without pushing the
+   * next heading off-screen. The order is left as the catalogue gives it --
+   * there is nothing to rank by, and inventing one would be a lie about what
+   * sells.
+   */
+  const shown = useMemo(() => {
+    if (!activeCategory) return [];
+
+    return products
+      .filter((product) => product.category?.slug === activeCategory)
+      .slice(0, PER_SECTION);
+  }, [products, activeCategory]);
+
+  // "See all" has to follow the chip, or it throws away the choice just made.
+  const selected = categories.find((category) => category.slug === activeCategory);
+  const sectionTitle = selected?.name ?? 'Shop';
+  const seeAllTo = selected ? `/products?category=${selected.slug}` : '/products';
 
   return (
     <motion.div {...pageIn} className="min-h-screen bg-surface pb-32 sm:pb-10">
       {/* ── Brand mark and location ──────────────────────────────────────── */}
-      <header className="pt-8 text-center">
-        <img
-          src="/design/logo-carrot.svg"
-          alt=""
-          aria-hidden="true"
-          width={26}
-          height={31}
-          className="mx-auto w-[26px] h-[31px]"
-        />
+      <header className="pt-[max(2rem,calc(env(safe-area-inset-top)+0.5rem))] text-center">
+        {/*
+          The full lockup, not the bare carrot -- the mark alone said nothing to
+          someone arriving from a shared link, and the banner artwork below
+          already carries the name this way.
+        */}
+        <div className="flex items-center justify-center gap-2.5">
+          <img
+            src="/design/logo-carrot.svg"
+            alt=""
+            aria-hidden="true"
+            width={26}
+            height={31}
+            className="w-[26px] h-[31px]"
+          />
+          <span className="text-[24px] font-extrabold tracking-tight text-brand-700">
+            Timeless Bazar
+          </span>
+        </div>
+        <p className="mt-1 text-[13px] font-semibold tracking-[0.08em] text-ink-faint">
+          Pure. Fresh. Timeless.
+        </p>
+
         <p className="mt-3 inline-flex items-center gap-1.5 text-[18px] font-semibold text-ink-muted">
           <MapPin className="w-[18px] h-[18px]" />
           Delhi NCR
         </p>
       </header>
 
-      {/* ── Search ───────────────────────────────────────────────────────── */}
-      <div className={cx('mt-4', GUTTER)}>
-        <button
-          onClick={() => navigate('/products')}
-          className="w-full h-[51.5px] flex items-center justify-center gap-3 rounded-[15px] bg-surface-sunken text-[14px] font-semibold text-ink-muted"
-        >
-          <Search className="w-[18px] h-[18px]" strokeWidth={2.4} />
-          Search Store
-        </button>
-      </div>
+      {/* ── Festival banner ──────────────────────────────────────────────── */}
+      <FestiveBanner navigateTo={navigate} />
 
-      {/* ── Shop by category ─────────────────────────────────────────────── */}
-      <section className="mt-7">
-        <SectionHead title="Shop by Category" to="/products" />
-        <CategoryGrid categories={categories} loading={loading} navigateTo={navigate} />
-      </section>
+      {/* ── Categories, and the products under whichever is chosen ───────── */}
+      <CategoryPills
+        categories={categories}
+        loading={loading}
+        active={activeCategory}
+        onSelect={setChosenCategory}
+      />
 
-      {/* ── Best Selling ─────────────────────────────────────────────────── */}
-      <section className="mt-7">
-        <SectionHead title="Best Selling" to="/products" />
-        <ProductGrid products={bestSelling} loading={loading} />
+      <section className="mt-6">
+        <SectionHead title={sectionTitle} to={seeAllTo} />
+        <ProductGrid products={shown} loading={loading} />
       </section>
 
       {/* ── Promo ────────────────────────────────────────────────────────── */}
       <section className="mt-8">
-        <PromoBanner categories={categories} loading={loading} navigateTo={navigate} />
+        <PromoBanner navigateTo={navigate} />
       </section>
 
       {/* ── Contact — a real shop, and customers do phone it ──────────────── */}

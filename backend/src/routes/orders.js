@@ -52,14 +52,69 @@ const createOrderBody = z.object({
  * The old format was 'TB' + Date.now() + a random number, producing 17-digit
  * strings nobody can read back over the phone.
  */
+
+/**
+ * DDMM in the shop's own timezone, whatever the server's happens to be.
+ *
+ * Render runs in UTC. Read off the server clock, every order placed between
+ * midnight and 05:30 IST was stamped with the previous day's date -- wrong for
+ * a shop in Delhi reading the number back over the phone.
+ */
+const istStamp = (date) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: '2-digit',
+  }).formatToParts(date);
+
+  const day = parts.find((part) => part.type === 'day').value;
+  const month = parts.find((part) => part.type === 'month').value;
+
+  return `${day}${month}`;
+};
+
+/**
+ * The next number under today's stamp.
+ *
+ * Taken from the highest number already issued, not from a count of documents.
+ * A count is not a sequence: delete one order and the next one reuses a number
+ * that still exists, and the window it counted ran from the *server's* midnight
+ * -- so a laptop on IST and Render on UTC disagreed about which orders were
+ * "today" and minted `TB-2808-0002` when that order was already in the
+ * database. The unique index rejected it and checkout answered 500.
+ *
+ * The zero-padding is what lets a plain string sort find the highest: within
+ * one prefix, `0010` sorts above `0009`.
+ */
 const makeOrderNumber = async () => {
-  const now = new Date();
-  const stamp = `${String(now.getDate()).padStart(2, '0')}${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const prefix = `TB-${istStamp(new Date())}-`;
 
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayCount = await Order.countDocuments({ createdAt: { $gte: todayStart } });
+  const latest = await Order.findOne({ orderNumber: { $regex: `^${prefix}` } })
+    .sort({ orderNumber: -1 })
+    .select('orderNumber')
+    .lean();
 
-  return `TB-${stamp}-${String(todayCount + 1).padStart(4, '0')}`;
+  const sequence = latest ? Number(latest.orderNumber.slice(prefix.length)) + 1 : 1;
+
+  return `${prefix}${String(sequence).padStart(4, '0')}`;
+};
+
+/**
+ * Create the order, standing back up if the number was taken.
+ *
+ * Two customers checking out in the same moment both read the same highest
+ * number, and the unique index rejects the loser. That is the index doing its
+ * job; the loser simply needs the next number, not a failed checkout.
+ */
+const createOrderWithNumber = async (fields, attempts = 5) => {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await Order.create({ ...fields, orderNumber: await makeOrderNumber() });
+    } catch (error) {
+      const numberTaken = error?.code === 11000 && error?.keyPattern?.orderNumber;
+      if (!numberTaken || attempt >= attempts) throw error;
+    }
+  }
 };
 
 /**
@@ -144,8 +199,7 @@ router.post(
     const deliveryFee = 0; // No delivery charge rules agreed yet.
     const total = subtotal - discount + deliveryFee;
 
-    const order = await Order.create({
-      orderNumber: await makeOrderNumber(),
+    const order = await createOrderWithNumber({
       userId: req.user.uid,
       userEmail: req.user.email ?? '',
       userName: req.user.name ?? address.label,

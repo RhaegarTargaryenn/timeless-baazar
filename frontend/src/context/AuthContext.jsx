@@ -97,10 +97,19 @@ export const AuthProvider = ({ children }) => {
    * someone clicks the link in their inbox, the local object keeps saying
    * false until it is reloaded — which looked like "I verified and it still
    * won't let me through".
+   *
+   * `reload()` alone only fixes what this browser believes. The ID token is a
+   * separate thing: it still carries the `email_verified: false` claim it was
+   * minted with, and `getIdToken()` hands that cached token out until it is
+   * close to expiring — up to an hour. The server reads the token, not our
+   * copy of the user, so the gate would open and then `POST /orders` would
+   * come back 403 "Please verify your email address before ordering" at the
+   * last step of checkout. `getIdToken(true)` forces a new one.
    */
   const refreshUser = useCallback(async () => {
     if (!auth.currentUser) return null;
     await auth.currentUser.reload();
+    await auth.currentUser.getIdToken(true);
     setUser({ ...auth.currentUser });
     return auth.currentUser;
   }, []);

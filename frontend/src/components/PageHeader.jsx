@@ -44,7 +44,10 @@ const PageHeader = ({ title, back = true, onBack, right, className, titleClassNa
     <header
       className={cx(
         'sticky top-0 sm:top-14 z-30 bg-surface border-b border-line',
-        'relative px-[25px] pt-12 pb-5',
+        'relative px-[25px] pb-5',
+        // The design's 48px of headroom, or the notch plus a little, whichever
+        // is larger. With viewport-fit=cover the bar would otherwise sit under it.
+        'pt-[max(3rem,calc(env(safe-area-inset-top)+0.75rem))]',
         className
       )}
     >
@@ -53,7 +56,7 @@ const PageHeader = ({ title, back = true, onBack, right, className, titleClassNa
           whileTap={tap}
           onClick={() => (onBack ? onBack() : navigate(-1))}
           aria-label="Go back"
-          className="absolute left-[15px] top-[42px] w-10 h-10 flex items-center justify-center text-ink"
+          className="absolute left-[15px] top-[max(2.625rem,calc(env(safe-area-inset-top)+0.375rem))] w-10 h-10 flex items-center justify-center text-ink"
         >
           <ChevronLeft className="w-6 h-6" strokeWidth={2.6} />
         </motion.button>
@@ -70,7 +73,7 @@ const PageHeader = ({ title, back = true, onBack, right, className, titleClassNa
       </h1>
 
       {right && (
-        <div className="absolute right-[15px] top-[42px] w-10 h-10 flex items-center justify-center">
+        <div className="absolute right-[15px] top-[max(2.625rem,calc(env(safe-area-inset-top)+0.375rem))] w-10 h-10 flex items-center justify-center">
           {right}
         </div>
       )}

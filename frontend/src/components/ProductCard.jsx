@@ -58,8 +58,12 @@ const Price = ({ paise, className }) => {
  * Once the item is in the cart the same shape stretches into a − 1 + stepper;
  * `layout` on the shared container makes that one continuous shape change
  * rather than one element swapping for another.
+ *
+ * `compact` drops it to 38px for the three-across Popular Picks row, where the
+ * full size leaves no room for a price beside it on a 320px phone. Nothing
+ * else changes -- same behaviour, same motion.
  */
-const AddControl = ({ product, variant, disabled }) => {
+const AddControl = ({ product, variant, disabled, compact = false }) => {
   const addItem = useCartStore((state) => state.addItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const quantity = useCartStore((state) =>
@@ -78,8 +82,13 @@ const AddControl = ({ product, variant, disabled }) => {
 
   if (disabled) {
     return (
-      <div className="w-[46px] h-[46px] rounded-[17px] bg-surface-sunken flex items-center justify-center text-ink-faint">
-        <Plus className="w-5 h-5" strokeWidth={2.6} />
+      <div
+        className={cx(
+          'rounded-[17px] bg-surface-sunken flex items-center justify-center text-ink-faint shrink-0',
+          compact ? 'w-[38px] h-[38px]' : 'w-[46px] h-[46px]'
+        )}
+      >
+        <Plus className={compact ? 'w-4 h-4' : 'w-5 h-5'} strokeWidth={2.6} />
       </div>
     );
   }
@@ -88,7 +97,10 @@ const AddControl = ({ product, variant, disabled }) => {
     <motion.div
       layout
       transition={layoutTransition}
-      className="h-[46px] rounded-[17px] bg-brand-600 flex items-center justify-center overflow-hidden shrink-0"
+      className={cx(
+        'rounded-[17px] bg-brand-600 flex items-center justify-center overflow-hidden shrink-0',
+        compact ? 'h-[38px]' : 'h-[46px]'
+      )}
     >
       <AnimatePresence mode="popLayout" initial={false}>
         {quantity === 0 ? (
@@ -105,9 +117,12 @@ const AddControl = ({ product, variant, disabled }) => {
               addItem(product, variant, 1);
             }}
             aria-label={`Add ${product.name} to cart`}
-            className="w-[46px] h-full flex items-center justify-center text-white"
+            className={cx(
+              'h-full flex items-center justify-center text-white',
+              compact ? 'w-[38px]' : 'w-[46px]'
+            )}
           >
-            <Plus className="w-5 h-5" strokeWidth={2.8} />
+            <Plus className={compact ? 'w-4 h-4' : 'w-5 h-5'} strokeWidth={2.8} />
           </motion.button>
         ) : (
           <motion.div
@@ -248,5 +263,5 @@ const ProductCard = memo(({ product }) => {
 
 ProductCard.displayName = 'ProductCard';
 
-export { Price };
+export { Price, AddControl };
 export default ProductCard;
