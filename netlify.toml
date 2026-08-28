@@ -17,6 +17,14 @@
   [build.environment]
     NODE_VERSION = "22"
 
+    # The Render API. Without this the build falls back to the localhost
+    # default in src/lib/api.js, and the deployed site talks to a machine that
+    # only exists on a developer's laptop -- the shop renders empty for every
+    # real visitor, and isAdmin never arrives so the admin panel row stays
+    # hidden. It lives here rather than in the Netlify dashboard so it cannot
+    # go missing again; the URL is public, not a secret.
+    VITE_API_URL = "https://timeless-baazar-api.onrender.com"
+
 # Redirect rules for React Router (SPA)
 [[redirects]]
   from = "/*"
