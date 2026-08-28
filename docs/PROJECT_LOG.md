@@ -1106,6 +1106,49 @@ the one-step check.
 
 ---
 
+## Order-accepted screen: the real artwork  2026-08-28
+
+The screen and both buttons were already there from the earlier pass. What was
+wrong was the picture: the tick and confetti had been **hand-authored** before
+the asset existed -- circles, dots and two invented curves that approximated the
+Figma frame. The client supplied `Group 6872.svg`, so the approximation is gone.
+
+**Inlined, not `<img>`.** Every piece animates on its own -- the disc springs in
+on `spring.sheet`, the tick lands a beat later so it reads as confirmation
+rather than decoration, the three ribbons draw themselves with `pathLength`, and
+the seven dots pop on a stagger. None of that is reachable through an image tag,
+and the app already had this motion; losing it to gain a file would have been a
+downgrade.
+
+Details worth keeping:
+
+- The file's last dot is written as a **mirrored** circle,
+  `matrix(-1 0 0 1 161.739 220)`. Resolved to a plain centre (157.70357,
+  224.03543) so every dot animates through the same code path.
+- SVG elements scale about the viewBox origin by default, so a corner dot flew
+  in from across the artboard. `transformBox: fill-box` +
+  `transformOrigin: center` makes each one pop where it sits.
+- Figma's filter id (`filter0_d_1_1832`) renamed to something readable.
+- `stroke` dots are rings and `fill` dots are solid; the design uses both and
+  they are not interchangeable.
+- The real composition is **asymmetric** in a way the approximation was not: the
+  disc sits right of centre (158.82 of 273) with the confetti weighted to the
+  lower left. Rendering the file's own viewBox preserves that.
+
+The design's body copy reads "Your items has been placcd and is on it's way" --
+kept corrected in the app rather than reproduced.
+
+### Verified
+
+Every `d`, every circle's cx/cy/r, every hex colour, the viewBox, the filter and
+the ring's stroke opacity were diffed programmatically against the source file:
+all match. `npm run build` clean.
+
+**Not seen rendering.** The geometry is provably the designer's, but nobody has
+watched it animate.
+
+---
+
 ## Resume here
 
 Running locally needs both:
