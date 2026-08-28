@@ -1212,6 +1212,48 @@ cards all draw correctly.
 
 ---
 
+## The deployed shop was pointing at localhost  2026-08-28
+
+The client deployed both halves and the shop would not load. Nothing was down:
+
+- Render API: `200`, `{"status":"ok","db":"connected"}`, `/api/products` `200`.
+  **The URL had not changed.**
+- CORS on Render: a preflight from `https://timelessbazzar.netlify.app` came
+  back with `access-control-allow-origin` set to exactly that. Fine.
+- Netlify: `200`, and serving the *current* build.
+
+The fault was in the bundle. `VITE_API_URL` had not been applied, so
+`src/lib/api.js` fell back to its `http://localhost:4000` default and the
+deployed shop was calling a machine that only exists on a developer's laptop.
+Every visitor got an empty catalogue.
+
+**The giveaway:** the entry chunk deployed on Netlify
+(`index-FJcUVmf_.js`) was byte-identical to the one built locally. Identical
+hashes mean identical inputs -- so whatever produced the deployed files had the
+same environment as a plain local `npm run build`, which has no `VITE_API_URL`.
+`netlify.toml`'s `[build.environment]` had never been read.
+
+That happens whenever the `build/` folder is uploaded by hand rather than built
+by Netlify's CI: **`netlify.toml` only configures builds Netlify itself runs.**
+
+### The fix
+
+`frontend/.env.production`, committed, holding the one line. Vite loads it
+automatically for `npm run build`, so the URL is baked in by *any* production
+build -- local, hand-uploaded, or CI. `netlify.toml` keeps its copy as
+belt-and-braces.
+
+`.gitignore` needed an exception: it ignored `.env.*` wholesale. The API
+hostname is public -- it is already sitting in `netlify.toml`, and anything
+`VITE_`-prefixed ships to every visitor regardless -- so there is nothing secret
+being committed. **`frontend/.env` still points at localhost and stays ignored**,
+which is what makes `npm run dev` work.
+
+Verified: the rebuilt bundle contains the Render URL once and
+`http://localhost:4000` zero times.
+
+---
+
 ## Resume here
 
 Running locally needs both:

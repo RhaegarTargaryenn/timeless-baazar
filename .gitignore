@@ -26,6 +26,12 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+# The deployed API URL is public (it is already in netlify.toml) and is NOT a
+# secret. It lives in a committed .env.production so that EVERY production
+# build gets it -- a local `npm run build`, a folder dragged into Netlify, or
+# Netlify's own CI. Relying on netlify.toml's build.environment only works for
+# the last of those.
+!.env.production
 
 # editor
 .vscode/
