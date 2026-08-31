@@ -61,11 +61,11 @@ const GUTTER = 'px-[25px]';
  */
 const BANNERS = [
   {
-    id: 'raksha-bandhan',
-    alt: 'Happy Raksha Bandhan from Timeless Bazar — celebrate the bond of love with pure and fresh ingredients',
-    webp: '/design/banners/raksha-bandhan-750.webp',
-    webpLarge: '/design/banners/raksha-bandhan-1200.webp',
-    jpg: '/design/banners/raksha-bandhan-1200.jpg',
+    id: 'janmashtami',
+    alt: 'Happy Janmashtami from Timeless Bazar — celebrate the divine birth of Krishna with pure and fresh essentials',
+    webp: '/design/banners/janmashtami-750.webp',
+    webpLarge: '/design/banners/janmashtami-1200.webp',
+    jpg: '/design/banners/janmashtami-1200.jpg',
     to: '/products',
   },
 ];
