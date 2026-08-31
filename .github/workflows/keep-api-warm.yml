@@ -1,0 +1,42 @@
+# Keeps the Render instance awake through the shop's opening hours.
+#
+# The API is on Render's free tier, which spins the container down after 15
+# minutes with no traffic and takes roughly a minute to boot again -- Node,
+# then the MongoDB Atlas connection. The first customer of the morning was
+# paying for that wake-up. A ping every 10 minutes means the container is
+# already running when they arrive.
+#
+# Why only 00:00-17:00 UTC (05:30-22:30 IST): the free tier allows 750 instance
+# hours a month across the account, and a round-the-clock ping would spend
+# almost all of them on a shop nobody is looking at. This window is ~550 hours
+# and covers every hour the shop is actually open.
+#
+# GitHub's scheduler is best-effort and runs late under load, which is why the
+# interval is 10 minutes rather than 14 -- there is room for a delay before the
+# container is allowed to sleep. Note also that GitHub disables scheduled
+# workflows in a repository with no activity for 60 days; if the morning gets
+# slow again, check here first and re-enable it.
+name: Keep the API warm
+
+on:
+  schedule:
+    - cron: '*/10 0-17 * * *'
+  workflow_dispatch:
+
+# The ping is idempotent and read-only; a queued run has nothing to add.
+concurrency:
+  group: keep-api-warm
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /health
+        run: |
+          curl --silent --show-error --fail-with-body \
+               --max-time 180 \
+               --retry 3 --retry-delay 20 --retry-all-errors \
+               --write-out '\nHTTP %{http_code} in %{time_total}s\n' \
+               https://timeless-baazar-api.onrender.com/health

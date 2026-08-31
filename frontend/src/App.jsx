@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './context/ThemeContext';
@@ -10,6 +10,7 @@ import PWAInstallPrompt from './components/PWAInstallPrompt';
 import BottomNav from './components/BottomNav';
 import { cx, PageSkeleton } from './components/ui';
 import { IconContext } from './components/icons';
+import { warmUpApi } from './lib/api';
 import './App.css';
 
 const Home = lazy(() => import('./pages/Home'));
@@ -170,6 +171,10 @@ const StorefrontRoutes = () => (
 const ICON_DEFAULTS = { weight: 'bold', size: '1em' };
 
 function App() {
+  // Start Render's container booting the moment the app loads, rather than
+  // when the customer first asks it for something. See warmUpApi.
+  useEffect(warmUpApi, []);
+
   return (
     <IconContext.Provider value={ICON_DEFAULTS}>
     <ThemeProvider>

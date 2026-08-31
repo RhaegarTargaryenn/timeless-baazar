@@ -241,6 +241,33 @@ export const EmptyState = ({ icon, title, message, action }) => (
   </div>
 );
 
+/**
+ * "The shop is opening" — the cold-start line.
+ *
+ * The API sleeps on Render's free tier and takes about a minute to wake, so the
+ * first visit of the morning can sit on skeletons far longer than a load has any
+ * right to. Silence there reads as broken; people reload, or leave. This says
+ * what is happening in the shop's own terms -- a customer does not know what a
+ * container is, and does not need to -- and appears only once the wait is long
+ * enough to notice, so an ordinary load never shows it.
+ *
+ * `role="status"` and not an alert: it is information, not a problem.
+ */
+export const WakingNotice = ({ className }) => (
+  <div
+    role="status"
+    className={cx(
+      'flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-surface-sunken',
+      className
+    )}
+  >
+    <Loader2 className="w-4 h-4 shrink-0 animate-spin text-brand-600" />
+    <p className="text-[13px] font-medium text-ink-muted">
+      Opening the shop — just a moment.
+    </p>
+  </div>
+);
+
 // ── Badge ──────────────────────────────────────────────────────────────────
 
 const BADGE_TONES = {

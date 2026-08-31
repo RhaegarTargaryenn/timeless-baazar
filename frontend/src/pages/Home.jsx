@@ -4,8 +4,8 @@ import { motion, useReducedMotion } from 'framer-motion';
 
 import { useProducts } from '../hooks/useProducts';
 import ProductCard from '../components/ProductCard';
-import { MapPin, ArrowRight } from '../components/icons';
-import { Skeleton, cx } from '../components/ui';
+import { MapPin, ArrowRight, WifiOff } from '../components/icons';
+import { Button, EmptyState, Skeleton, WakingNotice, cx } from '../components/ui';
 import { gridContainer, instant, pageIn, spring, tap } from '../lib/motion';
 
 /**
@@ -367,7 +367,7 @@ const PromoBanner = ({ navigateTo }) => (
 
 const Home = () => {
   const navigate = useNavigate();
-  const { products, categories, loading } = useProducts();
+  const { products, categories, loading, error, waking, reload } = useProducts();
 
   /**
    * Which chip in the strip is lit.
@@ -446,7 +446,25 @@ const Home = () => {
 
       <section className="mt-6">
         <SectionHead title={sectionTitle} to={seeAllTo} />
-        <ProductGrid products={shown} loading={loading} />
+        {/*
+          Three states, not one. Home used to hold skeletons no matter what
+          happened, so a sleeping API and a dead one looked identical -- and
+          both looked like a shop that had stopped working.
+        */}
+        {waking && loading ? (
+          <div className={GUTTER}>
+            <WakingNotice />
+          </div>
+        ) : error ? (
+          <EmptyState
+            icon={<WifiOff className="w-7 h-7" />}
+            title="Could not load the shop"
+            message={error}
+            action={<Button onClick={reload}>Try again</Button>}
+          />
+        ) : (
+          <ProductGrid products={shown} loading={loading} />
+        )}
       </section>
 
       {/* ── Promo ────────────────────────────────────────────────────────── */}

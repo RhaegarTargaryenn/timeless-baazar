@@ -1254,6 +1254,60 @@ Verified: the rebuilt bundle contains the Render URL once and
 
 ---
 
+## Janmashtami banner, and the morning cold start  2026-08-31
+
+**The banner.** Home's festival slot now carries the shop's Janmashtami
+artwork; Raksha Bandhan is past and its three files are deleted. The new art is
+the same 1774x887 as the old, so the card's fixed aspect ratio needed no change.
+Derivatives were generated with Pillow -- there is no sharp or ImageMagick on
+this machine -- at quality 82: `janmashtami-750.webp` (54 kB),
+`janmashtami-1200.webp` (108 kB), `janmashtami-1200.jpg` (141 kB, the fallback).
+Heavier than the Raksha Bandhan set because the composition carries more
+photography; if it needs to come down, quality is the dial.
+
+**The cold start.** The client noticed the first call of the morning takes about
+a minute and everything after it is fine. That is Render's free tier: the
+container spins down after 15 minutes idle and takes roughly a minute to boot
+Node and reconnect to Atlas. Nothing is broken. Two fixes, because they solve
+different halves of it:
+
+1. `.github/workflows/keep-api-warm.yml` pings `/health` every 10 minutes
+   between 00:00 and 17:00 UTC (05:30-22:30 IST). Ten and not the fourteen this
+   log first proposed, because GitHub's scheduler runs late under load and the
+   sleep timer is unforgiving. Opening hours only, because Render's free tier
+   allows 750 instance hours a month and a round-the-clock ping would spend
+   almost all of them on a shop nobody is looking at; this window is ~550. The
+   repo is public, so the Actions minutes are free. **GitHub disables scheduled
+   workflows after 60 days with no repository activity** -- if the mornings get
+   slow again, look here first.
+2. The app stops making the customer pay for a wake the cron does not cover
+   (outside those hours, or just after a deploy):
+   - `warmUpApi()` in `src/lib/api.js`, called once from `App.jsx`, pokes
+     `/health` fire-and-forget the moment the app mounts. Whatever the customer
+     reads first, the container boots underneath them.
+   - `useProducts` retries a cold start instead of reporting it. A sleeping
+     instance refuses the connection rather than answering slowly, so the first
+     fetch failed in about a second and a customer with no cache got "could not
+     load the shop" for a shop that was merely booting. Six retries, six seconds
+     apart, only when the connection failed outright (`status === 0`) and only
+     while there is nothing on screen -- a 4xx/5xx is the server answering and
+     repeating it would just repeat the answer.
+   - After four seconds the hook raises `waking`, and Home and Products show
+     `WakingNotice` -- "Opening the shop — just a moment." Home in particular
+     used to hold skeletons no matter what happened, so a sleeping API and a
+     dead one looked identical; it now has all three states, error included,
+     with a Try again that calls `reload`.
+
+The cache in `useProducts` still does the heaviest lifting for anyone who has
+visited before -- they see the previous catalogue instantly. All of this is for
+the first-ever visit, which is exactly the visit that decides whether someone
+comes back.
+
+Not verified in a browser: build passes and `/health` answers in 0.5s, but the
+waking notice has not been watched on a real cold instance.
+
+---
+
 ## Resume here
 
 Running locally needs both:
@@ -1276,9 +1330,9 @@ cd backend  && npm run dev   # API on :4000 -- without it the shop is empty
 3. **Checkout is the last screen on `ForestHeader`.** Everything else is
    converted. Once it is done, `ForestHeader.jsx` and `ScallopedSeam.jsx` are
    dead and can be deleted.
-4. **Keep-alive cron for Render**, every 14 minutes, so the free tier does not
-   cold-start in front of a customer.
-5. **A short written guide for the client.**
+4. **A short written guide for the client.**
+
+(The Render keep-alive that stood here is done -- see the 2026-08-31 entry.)
 
 Smaller, still outstanding:
 

@@ -5,7 +5,7 @@ import { Search, SearchX, WifiOff, SlidersHorizontal, X } from '../components/ic
 
 import ProductCard from '../components/ProductCard';
 import { useProducts } from '../hooks/useProducts';
-import { Skeleton, EmptyState, Button, cx } from '../components/ui';
+import { Skeleton, EmptyState, Button, WakingNotice, cx } from '../components/ui';
 import PageHeader from '../components/PageHeader';
 import { gridContainer, pageIn, spring, tap } from '../lib/motion';
 import { tintFor } from '../lib/categoryTints';
@@ -67,7 +67,7 @@ const GridSkeleton = ({ count = 6 }) => (
 const Products = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { products, categories, loading, error, isStale, reload } = useProducts();
+  const { products, categories, loading, error, isStale, waking, reload } = useProducts();
 
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
@@ -220,7 +220,9 @@ const Products = () => {
       <div className={cx('mt-5', GUTTER)}>
         {staleBanner}
 
-        {loading ? (
+        {waking && loading ? (
+          <WakingNotice />
+        ) : loading ? (
           <GridSkeleton />
         ) : error ? (
           <EmptyState

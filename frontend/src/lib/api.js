@@ -80,6 +80,29 @@ const request = async (path, { method = 'GET', body, signal } = {}) => {
   return payload;
 };
 
+/**
+ * Wake the API, without waiting for the answer.
+ *
+ * Render's free tier sleeps after 15 minutes idle and takes roughly a minute to
+ * boot. The keep-warm cron covers opening hours, but outside them -- and in the
+ * gap after a deploy -- the first request of the session still pays for it. So
+ * the app pokes /health the moment it starts: whatever the customer does first,
+ * whether that is reading Login or scrolling Home, the container is booting
+ * underneath them rather than starting when they finally tap something.
+ *
+ * /health and not a real endpoint because it needs no auth and touches nothing;
+ * once per page load because the point is to start the boot, not to monitor it.
+ * Failure is expected and ignored -- a sleeping instance is what this is for.
+ */
+let warmed = false;
+
+export const warmUpApi = () => {
+  if (warmed) return;
+  warmed = true;
+
+  fetch(`${BASE_URL}/health`, { method: 'GET', cache: 'no-store' }).catch(() => {});
+};
+
 export const api = {
   get: (path, options) => request(path, { ...options, method: 'GET' }),
   post: (path, body, options) => request(path, { ...options, method: 'POST', body }),
