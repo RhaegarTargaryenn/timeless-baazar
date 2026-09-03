@@ -64,7 +64,7 @@ const Header = ({ className }) => {
         className
       )}
     >
-      <div className="max-w-5xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="h-14 flex items-center gap-3">
           {/*
             The mark never shrinks; the wordmark truncates. On a 320px phone

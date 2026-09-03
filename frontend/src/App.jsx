@@ -96,7 +96,7 @@ const StorefrontShell = ({ children }) => {
       */}
       <main
         className={cx(
-          'flex-grow w-full max-w-5xl mx-auto',
+          'flex-grow w-full max-w-7xl mx-auto',
           !ownHeader && 'pb-28 sm:pb-0'
         )}
       >

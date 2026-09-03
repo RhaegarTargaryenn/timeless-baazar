@@ -34,7 +34,7 @@ const AdminLayout = () => {
     <div className="min-h-screen bg-surface-sunken pb-24 sm:pb-0">
       {/* Top bar */}
       <header className="sticky top-0 z-40 bg-forest">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white font-extrabold text-sm shrink-0">
               TB
@@ -88,7 +88,7 @@ const AdminLayout = () => {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-5">
+      <main className="max-w-7xl mx-auto px-4 py-5">
         <Outlet />
       </main>
 

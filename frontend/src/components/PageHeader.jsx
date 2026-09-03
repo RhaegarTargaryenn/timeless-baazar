@@ -18,8 +18,11 @@ import { cx } from './ui';
  * header rather than beneath it. The background must stay opaque: the rows
  * passing underneath would otherwise show through.
  *
- * The 48px of headroom is the design's status-bar gap. It is kept because the
- * app installs as a PWA, where that strip is the notch.
+ * The 48px of headroom is the design's status-bar gap. It is kept on a phone
+ * because the app installs as a PWA, where that strip is the notch -- and
+ * dropped from `sm` up, where there is no notch and the shared header already
+ * sits directly above this bar. Left in, it was 48px of empty white at the top
+ * of every screen this component draws.
  */
 
 /**
@@ -53,10 +56,14 @@ const PageHeader = ({ title, back = true, onBack, right, below, className, title
     <header
       className={cx(
         'sticky top-0 sm:top-14 z-30 bg-surface border-b border-line',
-        'relative px-[25px] pb-5',
+        'relative px-[25px] pb-5 sm:pb-4',
         // The design's 48px of headroom, or the notch plus a little, whichever
         // is larger. With viewport-fit=cover the bar would otherwise sit under it.
         'pt-[max(3rem,calc(env(safe-area-inset-top)+0.75rem))]',
+        // None of that applies on a desktop. There is no notch, and the shared
+        // header is already sitting directly above this bar -- so the 48px is
+        // pure empty space, on every screen that uses this component at once.
+        'sm:pt-4',
         className
       )}
     >
@@ -65,7 +72,7 @@ const PageHeader = ({ title, back = true, onBack, right, below, className, title
           whileTap={tap}
           onClick={() => (onBack ? onBack() : navigate(-1))}
           aria-label="Go back"
-          className="absolute left-[15px] top-[max(2.625rem,calc(env(safe-area-inset-top)+0.375rem))] w-10 h-10 flex items-center justify-center text-ink"
+          className="absolute left-[15px] top-[max(2.625rem,calc(env(safe-area-inset-top)+0.375rem))] sm:top-2.5 w-10 h-10 flex items-center justify-center text-ink"
         >
           <ChevronLeft className="w-6 h-6" />
         </motion.button>
@@ -82,7 +89,7 @@ const PageHeader = ({ title, back = true, onBack, right, below, className, title
       </h1>
 
       {right && (
-        <div className="absolute right-[15px] top-[max(2.625rem,calc(env(safe-area-inset-top)+0.375rem))] w-10 h-10 flex items-center justify-center">
+        <div className="absolute right-[15px] top-[max(2.625rem,calc(env(safe-area-inset-top)+0.375rem))] sm:top-2.5 w-10 h-10 flex items-center justify-center">
           {right}
         </div>
       )}
@@ -92,7 +99,7 @@ const PageHeader = ({ title, back = true, onBack, right, below, className, title
         strip here can carry its own background edge to edge rather than sitting
         in a 25px inset gutter.
       */}
-      {below && <div className="-mx-[25px] -mb-5 mt-5">{below}</div>}
+      {below && <div className="-mx-[25px] -mb-5 sm:-mb-4 mt-5 sm:mt-4">{below}</div>}
     </header>
   );
 };

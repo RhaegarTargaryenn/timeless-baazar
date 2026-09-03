@@ -52,7 +52,7 @@ const SearchField = ({ value, onChange }) => (
 );
 
 const GridSkeleton = ({ count = 6 }) => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-[15px]">
+  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[15px]">
     {Array.from({ length: count }).map((_, index) => (
       <div key={index} className="h-[248px] p-[15px] border border-line rounded-card">
         <Skeleton className="h-[100px] rounded-xl" />
@@ -212,8 +212,16 @@ const Products = () => {
 
       {/* ── Search — only on the browse screen, as the design places it ──── */}
       {browsing && (
-        <div className={cx('mt-6', GUTTER)}>
-          <SearchField value={search} onChange={(value) => setParam('search', value)} />
+        /*
+          Capped and centred from `sm` up. Stretched across the full column a
+          search box is a 974px-wide input holding a 14px word, which reads as a
+          gap in the page rather than a control -- and it sits under a centred
+          title, so centring it keeps the two on one axis.
+        */
+        <div className={cx('mt-6 sm:mt-5', GUTTER)}>
+          <div className="sm:max-w-md sm:mx-auto">
+            <SearchField value={search} onChange={(value) => setParam('search', value)} />
+          </div>
         </div>
       )}
 
@@ -237,7 +245,7 @@ const Products = () => {
             variants={gridContainer}
             initial="initial"
             animate="animate"
-            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-[15px]"
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[15px]"
           >
             {categories.map((item, index) => {
               const tint = tintFor(index);
@@ -293,7 +301,7 @@ const Products = () => {
             variants={gridContainer}
             initial="initial"
             animate="animate"
-            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-[15px]"
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[15px]"
           >
             {filtered.map((product) => (
               <ProductCard key={product._id} product={product} />

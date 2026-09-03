@@ -14,7 +14,18 @@ import {
 } from '../../components/icons';
 import { api, formatRupees } from '../../lib/api';
 import { haptic } from '../../lib/haptics';
-import { Skeleton, EmptyState, Button, cx } from '../../components/ui';
+import {
+  Skeleton,
+  EmptyState,
+  Button,
+  Table,
+  THead,
+  TBody,
+  TR,
+  TH,
+  TD,
+  cx,
+} from '../../components/ui';
 import { spring, gridContainer, gridItem, EASE } from '../../lib/motion';
 
 /**
@@ -76,33 +87,27 @@ const AddressBlock = ({ address }) => (
 );
 
 /**
- * One order.
+ * The note written into the order's history, and what the toast says.
  *
- * Collapsed it answers "who, when, how much, how many things". Expanded it
- * lists the items and the address. The client is standing at a counter, so the
- * collapsed row has to be readable at arm's length and the primary action has
- * to be reachable without opening anything.
+ * At module level because the card and the desktop table both move orders, and
+ * two copies would drift -- the strings in `statusHistory` are the shop's only
+ * record of who did what, so they have to match whichever control was used.
  */
-const OrderCard = ({ order, onChanged }) => {
-  const [open, setOpen] = useState(false);
+const NOTES = {
+  completed: 'Completed by shop',
+  cancelled: 'Cancelled by shop',
+  placed: 'Reopened by shop',
+};
+
+const MESSAGES = {
+  completed: 'marked done',
+  cancelled: 'cancelled',
+  placed: 'reopened',
+};
+
+/** Moving one order between states, shared by the card and the table row. */
+const useOrderStatus = (order, onChanged, onSettled) => {
   const [saving, setSaving] = useState(false);
-  const [confirmingCancel, setConfirmingCancel] = useState(false);
-
-  const done = order.status === 'completed';
-  const cancelled = order.status === 'cancelled';
-  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-
-  const NOTES = {
-    completed: 'Completed by shop',
-    cancelled: 'Cancelled by shop',
-    placed: 'Reopened by shop',
-  };
-
-  const MESSAGES = {
-    completed: 'marked done',
-    cancelled: 'cancelled',
-    placed: 'reopened',
-  };
 
   const setStatus = async (next) => {
     setSaving(true);
@@ -116,7 +121,7 @@ const OrderCard = ({ order, onChanged }) => {
       // pattern rather than the one the customer's order confirmation uses.
       haptic(next === 'completed' ? 'success' : next === 'cancelled' ? 'warning' : 'impact');
       toast.success(`${order.orderNumber} ${MESSAGES[next]}`);
-      setConfirmingCancel(false);
+      onSettled?.();
       onChanged(updated);
     } catch (error) {
       haptic('error');
@@ -125,6 +130,31 @@ const OrderCard = ({ order, onChanged }) => {
       setSaving(false);
     }
   };
+
+  return { setStatus, saving };
+};
+
+/**
+ * One order, on a phone.
+ *
+ * Collapsed it answers "who, when, how much, how many things". Expanded it
+ * lists the items and the address. The client is standing at a counter, so the
+ * collapsed row has to be readable at arm's length and the primary action has
+ * to be reachable without opening anything.
+ *
+ * `OrderTable` is the desktop counterpart; both drive `useOrderStatus`.
+ */
+const OrderCard = ({ order, onChanged }) => {
+  const [open, setOpen] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+
+  const done = order.status === 'completed';
+  const cancelled = order.status === 'cancelled';
+  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+
+  const { setStatus, saving } = useOrderStatus(order, onChanged, () =>
+    setConfirmingCancel(false)
+  );
 
   return (
     <motion.article
@@ -394,6 +424,245 @@ const ListSkeleton = () => (
   </div>
 );
 
+const STATUS_TONE = {
+  placed: 'bg-brand-50 text-brand-700 border-brand-200',
+  completed: 'bg-surface-sunken text-ink-muted border-line',
+  cancelled: 'bg-coral/10 text-coral border-coral/30',
+};
+
+const StatusPill = ({ status }) => (
+  <span
+    className={cx(
+      'inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-semibold capitalize',
+      STATUS_TONE[status] ?? STATUS_TONE.completed
+    )}
+  >
+    {status}
+  </span>
+);
+
+/**
+ * The same orders as a table, for a desktop.
+ *
+ * Not a replacement for the cards -- an alternative. The cards are built for a
+ * phone at a counter, where one order fills the hand and the primary action is
+ * a thumb's width. At 1280px that layout wastes most of the row on white, and
+ * the thing the client actually does at a desk -- run down the list looking for
+ * what is still to do -- is what a table is for.
+ *
+ * Columns are chosen from the same brief as the cards: **who to call** (the
+ * phone stays a `tel:` link) and **what to put in the bag** (the item count,
+ * with the full list one click away). A row expands in place rather than
+ * navigating, so the client never loses their position in the list.
+ */
+const OrderTable = ({ orders, onChanged }) => {
+  const [openId, setOpenId] = useState(null);
+
+  return (
+    <Table>
+      <THead>
+        <TR>
+          <TH className="w-8" />
+          <TH>Order</TH>
+          <TH>When</TH>
+          <TH>Customer</TH>
+          <TH align="center">Items</TH>
+          <TH align="right">Total</TH>
+          <TH align="center">Status</TH>
+          <TH align="right">Action</TH>
+        </TR>
+      </THead>
+      <TBody>
+        {orders.map((order) => (
+          <OrderRow
+            key={order._id}
+            order={order}
+            open={openId === order._id}
+            onToggle={() => setOpenId((current) => (current === order._id ? null : order._id))}
+            onChanged={onChanged}
+          />
+        ))}
+      </TBody>
+    </Table>
+  );
+};
+
+const OrderRow = ({ order, open, onToggle, onChanged }) => {
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const { setStatus, saving } = useOrderStatus(order, onChanged, () =>
+    setConfirmingCancel(false)
+  );
+
+  const done = order.status === 'completed';
+  const cancelled = order.status === 'cancelled';
+  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+
+  return (
+    <>
+      <TR
+        interactive
+        onClick={onToggle}
+        /*
+          Cancelled rows are the one kind that should never draw the eye: struck
+          through and dimmed, exactly as the card treats them.
+        */
+        className={cx(cancelled && 'opacity-70')}
+      >
+        <TD className="pr-0 text-ink-faint">
+          <ChevronDown
+            className={cx('w-4 h-4 transition-transform', open && 'rotate-180')}
+          />
+        </TD>
+
+        <TD className="font-semibold tabular whitespace-nowrap">{order.orderNumber}</TD>
+
+        <TD className="text-ink-muted whitespace-nowrap">{formatWhen(order.createdAt)}</TD>
+
+        <TD className="min-w-[180px]">
+          <p className={cx('font-semibold truncate', cancelled && 'line-through')}>
+            {order.userName || 'Guest'}
+          </p>
+          {order.address?.phone && (
+            /* Ringing the customer is the most common thing done with an order.
+               stopPropagation so calling does not also expand the row. */
+            <a
+              href={`tel:${order.address.phone}`}
+              onClick={(event) => event.stopPropagation()}
+              className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-600 hover:underline"
+            >
+              <Phone className="w-3 h-3" />
+              {order.address.phone}
+            </a>
+          )}
+        </TD>
+
+        <TD align="center" className="text-ink-muted tabular">
+          {itemCount}
+        </TD>
+
+        <TD align="right" className="font-semibold tabular whitespace-nowrap">
+          {formatRupees(order.total)}
+        </TD>
+
+        <TD align="center">
+          <StatusPill status={order.status} />
+        </TD>
+
+        <TD align="right" onClick={(event) => event.stopPropagation()}>
+          <Button
+            size="sm"
+            variant={done || cancelled ? 'secondary' : 'primary'}
+            loading={saving}
+            onClick={() => setStatus(done || cancelled ? 'placed' : 'completed')}
+          >
+            {done || cancelled ? 'Reopen' : 'Mark done'}
+          </Button>
+        </TD>
+      </TR>
+
+      {open && (
+        <TR className="bg-surface-sunken/40">
+          <TD colSpan={8} className="py-4">
+            <div className="grid grid-cols-[1fr_260px] gap-6">
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-ink-faint mb-2">
+                  Items
+                </p>
+                <ul className="space-y-1.5">
+                  {order.items.map((item, index) => (
+                    <li key={index} className="flex justify-between gap-4 text-[13px]">
+                      <span className="text-ink">
+                        {item.name}
+                        <span className="text-ink-muted"> ({item.variantLabel})</span>
+                        <span className="text-ink-faint"> x{item.quantity}</span>
+                      </span>
+                      <span className="tabular text-ink-muted shrink-0">
+                        {formatRupees(item.price * item.quantity)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Money rows only when they carry information -- no "₹0 off". */}
+                <div className="mt-3 pt-3 border-t border-line space-y-1 text-[13px]">
+                  {order.discount > 0 && (
+                    <div className="flex justify-between text-ink-muted">
+                      <span>Discount{order.coupon?.code ? ` (${order.coupon.code})` : ''}</span>
+                      <span className="tabular">-{formatRupees(order.discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold text-ink">
+                    <span>Total</span>
+                    <span className="tabular">{formatRupees(order.total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {order.address && <AddressBlock address={order.address} />}
+
+                {/*
+                  Cancelling writes off a customer's order, so it stays behind
+                  opening the row *and* behind a confirm -- inline, never
+                  `window.confirm`.
+                */}
+                {!cancelled && (
+                  <AnimatePresence mode="wait" initial={false}>
+                    {confirmingCancel ? (
+                      <motion.div
+                        key="confirm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15, ease: EASE }}
+                        className="flex items-center gap-2"
+                      >
+                        <p className="flex-1 text-[13px] text-ink-muted">Cancel this order?</p>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => setConfirmingCancel(false)}
+                        >
+                          No
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          loading={saving}
+                          onClick={() => setStatus('cancelled')}
+                        >
+                          Yes
+                        </Button>
+                      </motion.div>
+                    ) : (
+                      <motion.button
+                        key="ask"
+                        type="button"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15, ease: EASE }}
+                        onClick={() => {
+                          haptic('tap');
+                          setConfirmingCancel(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-coral"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Cancel this order
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                )}
+              </div>
+            </div>
+          </TD>
+        </TR>
+      )}
+    </>
+  );
+};
+
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [counts, setCounts] = useState({ all: 0, placed: 0, completed: 0, cancelled: 0 });
@@ -536,16 +805,24 @@ const AdminOrders = () => {
           }
         />
       ) : (
-        <motion.div
-          variants={gridContainer}
-          initial="initial"
-          animate="animate"
-          className="space-y-2.5"
-        >
-          {visible.map((order) => (
-            <OrderCard key={order._id} order={order} onChanged={handleChanged} />
-          ))}
-        </motion.div>
+        <>
+          {/* Cards on a phone, a table from  up. Alternatives, not one
+              layout stretched to cover both. */}
+          <motion.div
+            variants={gridContainer}
+            initial="initial"
+            animate="animate"
+            className="space-y-2.5 lg:hidden"
+          >
+            {visible.map((order) => (
+              <OrderCard key={order._id} order={order} onChanged={handleChanged} />
+            ))}
+          </motion.div>
+
+          <div className="hidden lg:block">
+            <OrderTable orders={visible} onChanged={handleChanged} />
+          </div>
+        </>
       )}
     </div>
   );

@@ -302,4 +302,91 @@ export const SectionHeader = ({ title, action, actionTo }) => (
   </div>
 );
 
+// ── Table ──────────────────────────────────────────────────────────────────
+
+/**
+ * A data table, for the admin panel on a desktop.
+ *
+ * The structure is shadcn/ui's `table` -- semantic `<table>` markup with the
+ * styling on the cells -- which is worth copying because it is one of the few
+ * pieces in that library with **no Radix dependency at all**: it is plain HTML
+ * and Tailwind classes, so it comes across without installing anything and
+ * without dragging in shadcn's `--background` / `--primary` variables, which
+ * would fight this app's `surface` / `ink` / `brand` tokens. The colours below
+ * are ours; only the anatomy is borrowed.
+ *
+ * **Desktop only, by intent.** The admin screens are card lists on a phone and
+ * stay that way -- a table on a 375px screen is a horizontal scrollbar with
+ * data hiding behind it. Call sites render this inside `hidden lg:block` and
+ * hide the cards with `lg:hidden`, so the two are alternatives rather than a
+ * layout that has to work at every width.
+ *
+ * The wrapper still scrolls sideways: a long customer name or a wide address
+ * should push a scrollbar inside the table rather than the page.
+ */
+export const Table = ({ className, children, ...rest }) => (
+  <div className="w-full overflow-x-auto rounded-card border border-line bg-surface-raised">
+    <table className={cx('w-full text-sm border-collapse', className)} {...rest}>
+      {children}
+    </table>
+  </div>
+);
+
+export const THead = ({ className, children, ...rest }) => (
+  <thead className={cx('bg-surface-sunken', className)} {...rest}>
+    {children}
+  </thead>
+);
+
+export const TBody = ({ className, children, ...rest }) => (
+  <tbody className={className} {...rest}>
+    {children}
+  </tbody>
+);
+
+/**
+ * `interactive` is for a row that does something when clicked. It carries the
+ * hover tint and the pointer; a plain row must not, or every row looks
+ * clickable and only some are.
+ */
+export const TR = ({ interactive = false, className, children, ...rest }) => (
+  <tr
+    className={cx(
+      'border-b border-line last:border-b-0',
+      interactive && 'cursor-pointer transition-colors hover:bg-surface-sunken/70',
+      className
+    )}
+    {...rest}
+  >
+    {children}
+  </tr>
+);
+
+export const TH = ({ align = 'left', className, children, ...rest }) => (
+  <th
+    scope="col"
+    className={cx(
+      'h-10 px-3 text-[12px] font-semibold uppercase tracking-wide text-ink-faint whitespace-nowrap',
+      align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left',
+      className
+    )}
+    {...rest}
+  >
+    {children}
+  </th>
+);
+
+export const TD = ({ align = 'left', className, children, ...rest }) => (
+  <td
+    className={cx(
+      'px-3 py-3 align-middle text-ink',
+      align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left',
+      className
+    )}
+    {...rest}
+  >
+    {children}
+  </td>
+);
+
 export { cx };

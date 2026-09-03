@@ -7,7 +7,18 @@ import toast from 'react-hot-toast';
 import { api, formatRupees, paiseToRupees, rupeesToPaise } from '../../lib/api';
 import { haptic } from '../../lib/haptics';
 import { spring, gridContainer, gridItem } from '../../lib/motion';
-import { Skeleton, Button, EmptyState, cx } from '../../components/ui';
+import {
+  Skeleton,
+  Button,
+  EmptyState,
+  Table,
+  THead,
+  TBody,
+  TR,
+  TH,
+  TD,
+  cx,
+} from '../../components/ui';
 
 /**
  * Edit one variant's price without leaving the list.
@@ -119,7 +130,14 @@ const PriceCell = ({ product, variant, onSaved }) => {
   );
 };
 
-const ProductRow = ({ product, onChanged }) => {
+/**
+ * The show/hide toggle, shared by the phone card and the desktop table.
+ *
+ * It goes through the dedicated `/visibility` route rather than a general
+ * PATCH, so flipping a switch can never carry a stale form's fields along with
+ * it and overwrite a price.
+ */
+const useProductVisibility = (product, onChanged) => {
   const [toggling, setToggling] = useState(false);
 
   const toggleVisibility = async () => {
@@ -135,6 +153,12 @@ const ProductRow = ({ product, onChanged }) => {
       setToggling(false);
     }
   };
+
+  return { toggleVisibility, toggling };
+};
+
+const ProductRow = ({ product, onChanged }) => {
+  const { toggleVisibility, toggling } = useProductVisibility(product, onChanged);
 
   return (
     <motion.div
@@ -221,6 +245,120 @@ const ProductRow = ({ product, onChanged }) => {
         </div>
       </div>
     </motion.div>
+  );
+};
+
+/**
+ * The catalogue as a table, for a desktop.
+ *
+ * The phone cards stay: this is the alternative shown from `lg` up, where two
+ * fixed-height cards side by side leave most of a 1280px screen empty and the
+ * client scrolls 71 products a handful at a time. A row per product puts far
+ * more of the catalogue in one screenful, which is what "arhar dal is 140 now"
+ * actually needs.
+ *
+ * `PriceCell` is reused rather than reimplemented -- editing a price in place
+ * is this screen's entire reason for existing, and a second copy of that
+ * behaviour would be a second thing to keep correct.
+ */
+const ProductTable = ({ products, onChanged }) => (
+  <Table>
+    <THead>
+      <TR>
+        <TH className="w-14" />
+        <TH>Product</TH>
+        <TH>Category</TH>
+        <TH>Prices</TH>
+        <TH align="center">On shop</TH>
+        <TH align="right">Edit</TH>
+      </TR>
+    </THead>
+    <TBody>
+      {products.map((product) => (
+        <ProductTableRow key={product._id} product={product} onChanged={onChanged} />
+      ))}
+    </TBody>
+  </Table>
+);
+
+const ProductTableRow = ({ product, onChanged }) => {
+  const { toggleVisibility, toggling } = useProductVisibility(product, onChanged);
+
+  return (
+    <TR className={cx(!product.isActive && 'bg-surface-sunken/50')}>
+      <TD>
+        <div className="w-10 h-10 rounded-lg bg-surface-sunken overflow-hidden">
+          {product.images?.[0] ? (
+            <img
+              src={product.images[0]}
+              alt=""
+              loading="lazy"
+              className={cx(
+                'w-full h-full object-cover',
+                !product.isActive && 'opacity-40 grayscale'
+              )}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-ink-faint">
+              <PackageX className="w-4 h-4" />
+            </div>
+          )}
+        </div>
+      </TD>
+
+      <TD className="min-w-[200px]">
+        <p className="font-semibold text-ink truncate">{product.name}</p>
+        {product.nameHindi && (
+          <p className="text-[12px] text-ink-muted truncate">{product.nameHindi}</p>
+        )}
+      </TD>
+
+      <TD className="text-ink-muted whitespace-nowrap">{product.category?.name ?? '—'}</TD>
+
+      {/* Every size on one line, each editable where it stands. */}
+      <TD>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {product.variants.map((variant) => (
+            <PriceCell
+              key={variant._id}
+              product={product}
+              variant={variant}
+              onSaved={onChanged}
+            />
+          ))}
+        </div>
+      </TD>
+
+      <TD align="center">
+        <button
+          onClick={toggleVisibility}
+          disabled={toggling}
+          title={product.isActive ? 'Hide from shop' : 'Show on shop'}
+          className={cx(
+            'p-2 rounded-lg transition-colors disabled:opacity-50 hover:bg-surface-sunken',
+            product.isActive ? 'text-brand-600' : 'text-ink-faint'
+          )}
+        >
+          {toggling ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : product.isActive ? (
+            <Eye className="w-4 h-4" />
+          ) : (
+            <EyeOff className="w-4 h-4" />
+          )}
+        </button>
+      </TD>
+
+      <TD align="right">
+        <Link
+          to={`/admin/products/${product._id}`}
+          title="Edit"
+          className="inline-flex p-2 rounded-lg text-ink-muted hover:bg-surface-sunken transition-colors"
+        >
+          <Pencil className="w-4 h-4" />
+        </Link>
+      </TD>
+    </TR>
   );
 };
 
@@ -512,12 +650,16 @@ const AdminProducts = () => {
             variants={gridContainer}
             initial="initial"
             animate="animate"
-            className="grid grid-cols-1 md:grid-cols-2 gap-2.5"
+            className="grid grid-cols-1 md:grid-cols-2 gap-2.5 lg:hidden"
           >
             {filtered.map((product) => (
               <ProductRow key={product._id} product={product} onChanged={handleChanged} />
             ))}
           </motion.div>
+
+          <div className="hidden lg:block">
+            <ProductTable products={filtered} onChanged={handleChanged} />
+          </div>
         </>
       )}
     </div>

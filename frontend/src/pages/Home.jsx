@@ -91,7 +91,18 @@ const FestiveBanner = ({ navigateTo }) => {
   };
 
   return (
-    <div className="mt-5">
+    /*
+      It fills the column.
+
+      A narrower centred cap was tried, to keep a 2:1 hero from standing 600px
+      tall on a laptop, and it was wrong: white margins either side of the one
+      picture on the page read as a broken layout long before the height reads
+      as too much. If the height ever has to come down, the honest lever is
+      artwork drawn at a wider ratio -- cropping this file cannot do it, because
+      the headline runs down the left and the trust badges run along the bottom,
+      so there is nothing to cut.
+    */
+    <div className="mt-5 sm:mt-4">
       <div
         onScroll={onScroll}
         className={cx(
@@ -110,7 +121,12 @@ const FestiveBanner = ({ navigateTo }) => {
               <source
                 type="image/webp"
                 srcSet={`${banner.webp} 750w, ${banner.webpLarge} 1200w`}
-                sizes="(min-width: 640px) 640px, 100vw"
+                /*
+                  What the slot is actually worth: the column, less its 25px
+                  gutters. This said `640px` while the column was capped, which
+                  now picks the 750w file for a 1230px slot and draws it soft.
+                */
+                sizes="(min-width: 1280px) 1230px, (min-width: 640px) calc(100vw - 50px), 100vw"
               />
               <img
                 src={banner.jpg}
@@ -174,6 +190,11 @@ const SectionHead = ({ title, to }) => (
  * its price, neither of which needs full width, and one-per-row would put the
  * contact block four screens down.
  */
+/*
+  Four columns is the ceiling here, not five as on Explore: this section shows
+  exactly PER_SECTION products, so a fifth column would leave a hole at the end
+  of the only row rather than fitting more in.
+*/
 const GRID = 'grid grid-cols-2 gap-[15px] sm:grid-cols-3 lg:grid-cols-4 sm:gap-5';
 
 const ProductGrid = ({ products, loading }) => {
@@ -241,6 +262,11 @@ const CategoryPills = ({ categories, loading, active, onSelect }) => {
       <div
         role="tablist"
         aria-label="Shop by category"
+        /*
+          Six 82px chips come to under 500px. Left-aligned in a 974px row that
+          left half the pill empty, so from `sm` up the strip is only as wide as
+          its chips and sits in the middle of the column.
+        */
         className="flex gap-1 p-1.5 rounded-[22px] bg-surface-sunken overflow-x-auto scrollbar-hide"
       >
         {categories.map((chip) => {
@@ -253,7 +279,7 @@ const CategoryPills = ({ categories, loading, active, onSelect }) => {
               aria-selected={selected}
               whileTap={tap}
               onClick={() => onSelect(chip.slug)}
-              className="relative shrink-0 w-[82px] py-2.5 flex flex-col items-center gap-1.5"
+              className="relative shrink-0 sm:shrink w-[82px] sm:w-auto sm:flex-1 py-2.5 flex flex-col items-center gap-1.5"
             >
               {/*
                 One element shared across every chip, not one per chip: Framer
@@ -404,13 +430,25 @@ const Home = () => {
   return (
     <motion.div {...pageIn} className="min-h-screen bg-surface pb-32 sm:pb-10">
       {/* ── Brand mark and location ──────────────────────────────────────── */}
-      <header className="pt-[max(2rem,calc(env(safe-area-inset-top)+0.5rem))] text-center">
+      {/*
+        This block is the phone's header -- the shared `Header` is hidden below
+        `sm` on this route, so the lockup and the location are the only things
+        naming the shop there.
+
+        From `sm` up the shared header is back, carrying the same carrot and the
+        same name a few pixels above. Repeating the lockup there is not a
+        spacing problem to be tuned, it is the same brand said twice, and the
+        90-odd pixels it costs are what pushed the banner most of the way down a
+        laptop screen. So the lockup and its tagline are the phone's alone; the
+        location stays, because the header does not say it.
+      */}
+      <header className="pt-[max(2rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-5 text-center">
         {/*
           The full lockup, not the bare carrot -- the mark alone said nothing to
           someone arriving from a shared link, and the banner artwork below
           already carries the name this way.
         */}
-        <div className="flex items-center justify-center gap-2.5">
+        <div className="sm:hidden flex items-center justify-center gap-2.5">
           <img
             src="/design/logo-carrot.svg"
             alt=""
@@ -423,12 +461,13 @@ const Home = () => {
             Timeless Bazar
           </span>
         </div>
-        <p className="mt-1 text-[13px] font-semibold tracking-[0.08em] text-ink-faint">
+        <p className="sm:hidden mt-1 text-[13px] font-semibold tracking-[0.08em] text-ink-faint">
           Pure. Fresh. Timeless.
         </p>
 
-        <p className="mt-3 inline-flex items-center gap-1.5 text-[18px] font-semibold text-ink-muted">
-          <MapPin className="w-[18px] h-[18px]" />
+        {/* No stack above it on a desktop, so it needs no gap from one. */}
+        <p className="mt-3 sm:mt-0 inline-flex items-center gap-1.5 text-[18px] sm:text-[15px] font-semibold text-ink-muted">
+          <MapPin className="w-[18px] h-[18px] sm:w-4 sm:h-4" />
           Delhi NCR
         </p>
       </header>
