@@ -1481,14 +1481,28 @@ shop account ever stops seeing the panel, the first place to look is
   it was before the claim work, and both granted claims revoked before the
   tooling was deleted -- `--list` read 0 while it could still be run.
 
-**One thing the claim work turned up that outlived it:** the local `ADMIN_UIDS`
-holds **three** uids, not the two this log had recorded -- the developer,
-`timelessbazzar76@gmail.com` (the shop), and `guptashyamsunder501@gmail.com`.
-The third is not mentioned anywhere else here. Worth confirming with the client
-that it belongs.
+### Who the admins are, settled
 
-Whether Render's copy matches has still never been checked from here; the client
-believes the uids in it can reach the panel.
+The claim work turned up that `ADMIN_UIDS` held **three** uids, not the two this
+log had recorded. Put to the client, who answered plainly: there are two admins,
+the shop and Shyam Gupta, and **the developer's own account is not one of them.**
+
+```
+ADMIN_UIDS=Ad0tpBOlaQfGQes5KIv6IaXNdaK2,y2fiIKthD0e8PYI0YAnpnqoL1Ak1
+             timelessbazzar76@gmail.com   guptashyamsunder501@gmail.com
+```
+
+`backend/.env` is set to exactly that. **Render's copy has to be set to the same
+string by hand** -- it is a separate copy and nothing syncs the two.
+
+Worth stating once, because it caused real confusion: **no uid is written
+anywhere in the code.** `config.adminUids` is the only thing that reads
+`ADMIN_UIDS`, and `middleware/auth.js` is the only thing that reads that. There
+is no second list in `src` to keep in step -- the env var is the whole of it.
+
+A consequence to expect rather than treat as a fault: the developer can no
+longer open `/admin` on their own machine either, because local and production
+now read the same two uids.
 
 ---
 
@@ -1508,13 +1522,13 @@ cd backend  && npm run dev   # API on :4000 -- without it the shop is empty
    receives them still appends, so until it is redeployed a completed order adds
    a duplicate row instead of updating its own. Nothing else here is blocked by
    it, and it is five minutes in the client's Google account.
-1. **`ADMIN_UIDS` on Render.** Local `backend/.env` lists three uids: the
-   developer, the shop (`timelessbazzar76@gmail.com`) and
-   `guptashyamsunder501@gmail.com`. **Render keeps its own copy and nothing
-   syncs the two** — if the shop cannot see the panel in production, that copy
-   is the first place to look. Custom claims were tried as a fix for this on
-   2026-09-03 and removed at the client's request; the env var is the only
-   mechanism, by their decision.
+1. **`ADMIN_UIDS` on Render.** `backend/.env` is now the client's settled list of
+   two — the shop and Shyam Gupta, developer removed. **Render keeps its own
+   copy and nothing syncs the two**, so it has to be set there by hand to the
+   same string:
+   `Ad0tpBOlaQfGQes5KIv6IaXNdaK2,y2fiIKthD0e8PYI0YAnpnqoL1Ak1`.
+   If either admin cannot see the panel in production, that copy is the first
+   place to look — never the code, which holds no uid at all.
 2. **Cloudinary image upload.** The admin form still takes an image *path*, so
    the client cannot add a product photographed on their phone. The last gap
    stopping the panel from being genuinely self-serve.

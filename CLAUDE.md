@@ -52,12 +52,18 @@ cd backend && npm run migrate-orders   # one-off: six old statuses -> two
   `status: { $ne: 'cancelled' }`, and the two must stay in step. Without it, the
   shop voiding a mistaken order burns the customer's one use of a code for an
   order that never happened.
-- **Admin is `ADMIN_UIDS`, an env var, and nothing else.** To add one, put the
-  Firebase UID in `backend/.env` locally *and* in Render's own environment —
-  they are separate copies and neither syncs to the other. Firebase custom
-  claims were built for this on 2026-09-03 and **removed the same day at the
-  client's request**: they maintain this alone and wanted one mechanism they
-  could reason about, not two. Do not reintroduce them.
+- **Admin is `ADMIN_UIDS`, an env var, and nothing else.** No uid is hardcoded
+  anywhere in `src` — `config.adminUids` is the only reader, so the env var is
+  the single place a change is ever made. It lives in two unsynced copies:
+  `backend/.env` locally *and* Render's own environment. **Both must be edited;
+  neither propagates to the other.**
+  - **There are exactly two admins, decided by the client on 2026-09-03:**
+    `timelessbazzar76@gmail.com` (the shop) and `guptashyamsunder501@gmail.com`.
+    The developer's own account was deliberately removed. Do not add a third, or
+    re-add the developer, without being asked.
+  - Firebase custom claims were built for this the same day and **removed hours
+    later at the client's request** — they maintain this alone and wanted one
+    mechanism they could reason about, not two. Do not reintroduce them.
 - **The Google Sheet is a mirror of MongoDB, never a source.** Nothing in the
   app reads it. Two writes, both fire-and-forget from
   `backend/src/services/sheets.js`: `syncOrderToSheet` when an order is placed,
