@@ -3,7 +3,7 @@
 Running log of the rebuild. **Read this first in a new session.**
 Update it at the end of every phase.
 
-Last updated: 2026-08-28
+Last updated: 2026-09-03
 
 ---
 
@@ -1308,6 +1308,99 @@ waking notice has not been watched on a real cold instance.
 
 ---
 
+## Order status reaches the Google Sheet  2026-09-03
+
+The shop completes or cancels an order in the admin panel and the sheet went on
+showing `placed` forever. They still read their orders off that sheet, so it was
+not merely stale -- it was a record actively contradicting what they had just
+done, on the one screen they trust.
+
+**Only order creation ever wrote to the sheet.** `PATCH
+/orders/:orderNumber/status` updated MongoDB and stopped there.
+
+### The receiving end was the actual obstacle
+
+The obvious fix -- re-post the order when its status changes -- would have made
+things worse, because the deployed Apps Script appends unconditionally:
+
+```js
+sheet.appendRow([ data['Order ID'], ... ]);
+```
+
+So every "Mark done" would have added a **second row for the same order**. The
+script had to learn to upsert on `Order ID` before the backend change was worth
+anything. Full replacement and deployment steps: **`docs/GOOGLE_SHEET_SYNC.md`**.
+The root `GOOGLE_APPS_SCRIPT_UPDATE.md` is superseded and now says so at the top
+-- deploying what is on that page would reintroduce exactly this bug.
+
+The new script also **maps by header name rather than column position**. The old
+one hardcoded twelve indexes; `toSheetRow` has grown to eighteen fields since,
+so `Email`, `City`, `State`, `Pincode`, `Subtotal`, `Discount` and `Coupon` were
+being posted into a script that had no idea they existed. Matching on the
+heading text means the sheet's column order stops mattering and the shop can
+reorder or add columns without anyone touching code.
+
+Three smaller things fell out of it: **columns the payload does not mention are
+left alone**, so a `Notes` column the shop types into by hand survives a status
+update; the notification email fires on **new orders only**, because mailing
+them about their own tap is noise against a 100/day quota; and a `LockService`
+lock closes the race where two orders landing in the same second both read the
+same last row.
+
+### Backend
+
+`syncOrderStatusToSheet` in `services/sheets.js`, called fire-and-forget from
+the status route exactly as order creation calls its counterpart. The client is
+at a counter with a customer in front of them -- neither a slow Apps Script nor
+a Google outage may make "Mark done" hang or fail. The status is committed to
+Mongo before the push is attempted.
+
+It sends the **whole row**, not just the status cell. The script keys off header
+names either way so a partial payload buys nothing, and if the creation sync
+never landed (Google down at checkout) the upsert appends the missing row here
+instead of failing against a row that does not exist. That is why success also
+sets `sheetSynced`: a post that returns OK means the row is in the sheet,
+whichever branch the script took to put it there.
+
+Two attempts rather than creation's three. Both run in the background, but a
+lost order is unrecoverable where a stale status cell is fixed by the next
+change to that order re-posting everything.
+
+**`sheetStatusSyncedAt` / `sheetStatusSyncError` are new fields on `Order`, and
+a failed status push deliberately leaves `sheetSynced` alone.** The two answer
+different questions -- "is this order in the sheet at all" versus "did its last
+status change get there" -- and folding them together would drop every status
+failure into `retryFailedSyncs`' queue as though the order itself had been lost.
+
+Also added to the row: **`Status Updated`**, so a row that changed can be told
+from one that has sat there since it was placed.
+
+### Verified
+
+Two harnesses, both green, neither needing a database or a real spreadsheet:
+
+- **The Apps Script, extracted from the doc's own code fence** (so the test runs
+  what the client will paste) against a fake `SpreadsheetApp`. 19 checks:
+  placed -> completed -> reopened -> cancelled leaves **one row**, carrying
+  `cancelled`; one email, not four; the right row updated among many; a `Notes`
+  column preserved; an old twelve-column sheet still upserts; an empty sheet
+  writes its own headers; a sheet with no `Order ID` column throws rather than
+  writing junk.
+- **`syncOrderStatusToSheet` against a local HTTP stand-in**, Mongoose stubbed.
+  19 checks: paise converted, 18-key payload, `text/plain` so there is no
+  preflight, one post on success and the right fields recorded; on a 500, two
+  attempts with a real backoff, the error recorded, and `sheetSynced`
+  untouched. Order creation still posts once on success and retries three times
+  before flagging itself for `retryFailedSyncs`.
+
+**Not verified against the real sheet, and it cannot be from here** -- the Apps
+Script lives in the client's Google account. Deploying it is the remaining step,
+and until it is done status changes will duplicate rows rather than update them.
+The one-step check afterwards: complete an order in `/admin/orders` and watch the
+existing row's Status change rather than a new row appearing.
+
+---
+
 ## Resume here
 
 Running locally needs both:
@@ -1319,6 +1412,11 @@ cd backend  && npm run dev   # API on :4000 -- without it the shop is empty
 
 **Still to do** (rewritten 2026-08-28; several items below were stale):
 
+0. **Deploy the new Apps Script** (`docs/GOOGLE_SHEET_SYNC.md`). The backend
+   pushes status changes to the sheet as of 2026-09-03, but the script that
+   receives them still appends, so until it is redeployed a completed order adds
+   a duplicate row instead of updating its own. Nothing else here is blocked by
+   it, and it is five minutes in the client's Google account.
 1. **`ADMIN_UIDS` on Render.** Local `backend/.env` now lists both the developer
    and the shop (`timelessbazzar76@gmail.com`). **Render has its own copy of the
    environment and has not been updated**, so the shop account is an admin

@@ -1,5 +1,22 @@
 ![1771571516391](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571516391.png)![1771571519047](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571519047.png)![1771571520695](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571520695.png)![1771571522010](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571522010.png)![1771571522909](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571522909.png)![1771571535386](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571535386.png)![1771571536182](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571536182.png)![1771571536397](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571536397.png)![1771571536567](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571536567.png)![1771571536717](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571536717.png)![1771571537649](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571537649.png)![1771571538225](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571538225.png)![1771571538559](image/GOOGLE_APPS_SCRIPT_UPDATE/1771571538559.png)# Google Apps Script Update - Order Tracking + Email Notifications
 
+> ## ⚠️ Superseded — do not deploy the script below
+>
+> **Use [`docs/GOOGLE_SHEET_SYNC.md`](docs/GOOGLE_SHEET_SYNC.md) instead.**
+>
+> The script on this page `appendRow`s on every POST. The backend now re-posts
+> an order whenever the shop completes or cancels it, so this version would add
+> a **second row for the same order** instead of updating the first one. The
+> replacement upserts on `Order ID`.
+>
+> Two more things here are out of date: the twelve hardcoded column positions
+> (the backend sends eighteen fields now, and the new script maps by header
+> name), and `doGet` with its six-status `normalizeStatus` map — the app reads
+> orders from `/api/orders` and has three statuses: `placed`, `completed`,
+> `cancelled`.
+>
+> Kept only as the record of what was deployed before 2026-09-03.
+
 ## 📋 Overview
 This update adds:
 1. **📧 Instant Email Notifications** - Get beautiful email alerts when orders are placed (100/day FREE)

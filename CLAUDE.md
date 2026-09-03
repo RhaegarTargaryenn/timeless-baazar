@@ -52,6 +52,14 @@ cd backend && npm run migrate-orders   # one-off: six old statuses -> two
   `status: { $ne: 'cancelled' }`, and the two must stay in step. Without it, the
   shop voiding a mistaken order burns the customer's one use of a code for an
   order that never happened.
+- **The Google Sheet is a mirror of MongoDB, never a source.** Nothing in the
+  app reads it. Two writes, both fire-and-forget from
+  `backend/src/services/sheets.js`: `syncOrderToSheet` when an order is placed,
+  `syncOrderStatusToSheet` every time the shop completes/cancels/reopens it. The
+  receiving Apps Script **upserts on `Order ID`** and maps by header name — see
+  `docs/GOOGLE_SHEET_SYNC.md`. Editing Status in the sheet by hand does nothing
+  and gets overwritten. Do not follow the root `GOOGLE_APPS_SCRIPT_UPDATE.md`;
+  it is superseded and its script appends duplicate rows.
 - Prices: never read `price1kg` / `price500g` directly to decide whether
   something is buyable. Use `isPurchasable(product, size)` from
   `src/data/products.js` — it is the single source of truth.

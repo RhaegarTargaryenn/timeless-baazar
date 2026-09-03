@@ -149,6 +149,21 @@ const orderSchema = new mongoose.Schema(
     sheetSynced: { type: Boolean, default: false },
     sheetSyncedAt: { type: Date, default: null },
     sheetSyncError: { type: String, default: null },
+
+    /**
+     * Whether the shop's *latest* status change reached the sheet.
+     *
+     * Tracked apart from `sheetSynced` because the two answer different
+     * questions. `sheetSynced` is "is this order in the sheet at all", and a
+     * failed status push does not un-place a row that landed at order time --
+     * folding them together would drop every status failure into
+     * `retryFailedSyncs`' queue as though the order itself had been lost.
+     *
+     * Null on an order whose status has never been moved, which is most of
+     * them: an order that is still `placed` has nothing to push.
+     */
+    sheetStatusSyncedAt: { type: Date, default: null },
+    sheetStatusSyncError: { type: String, default: null },
   },
   { timestamps: true }
 );

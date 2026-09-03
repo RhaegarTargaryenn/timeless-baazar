@@ -8,7 +8,7 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/HttpError.js';
-import { syncOrderToSheet } from '../services/sheets.js';
+import { syncOrderToSheet, syncOrderStatusToSheet } from '../services/sheets.js';
 
 const router = Router();
 
@@ -354,6 +354,26 @@ router.patch(
     );
 
     if (!order) throw new HttpError(404, 'Order not found.');
+
+    /*
+      The shop still reads orders off their Google Sheet, so an order they just
+      completed or cancelled must not go on showing as `placed` there. The sheet
+      is a mirror of this database, never the other way round.
+
+      Fire-and-forget, exactly like the sync at order creation: the client is
+      standing at a counter with a customer in front of them, and neither a slow
+      Apps Script nor a Google outage may make "Mark done" hang or fail. The
+      status is already committed above; a failed push is recorded on the order
+      as `sheetStatusSyncError`, and the next change to this order re-posts the
+      whole row anyway.
+    */
+    syncOrderStatusToSheet(order).catch((error) => {
+      console.error(
+        `[sheets] status ${order.orderNumber} -> ${status} failed:`,
+        error.message
+      );
+    });
+
     res.json({ order });
   })
 );
