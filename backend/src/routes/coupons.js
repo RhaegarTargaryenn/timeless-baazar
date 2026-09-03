@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 
 import Coupon from '../models/Coupon.js';
 import Order from '../models/Order.js';
@@ -35,6 +36,35 @@ const checkPercent = (body) => {
 };
 
 /**
+ * Guessing coupon codes has to be slow.
+ *
+ * The app-wide limiter allows 120 requests a minute, which against a code space
+ * of short human-memorable strings -- SAVE10, DIWALI, FIRST50 -- is not a
+ * defence, it is a rate card. This endpoint is the only place that will tell a
+ * caller whether a code is real, so it needs its own budget.
+ *
+ * **Only failures count** (`skipSuccessfulRequests`). A customer applying a code
+ * that works, changing their cart and applying it again is doing nothing wrong
+ * and must never be locked out mid-checkout; someone working through a
+ * wordlist gets nothing but misses, and stops after ten.
+ *
+ * Keyed on the Firebase uid rather than the IP, which is why this sits *after*
+ * `requireAuth`. A household behind one connection would otherwise share a
+ * budget, and IP is the weaker identifier here anyway -- an attacker changes
+ * networks more easily than they mint accounts.
+ */
+const validateLimiter = rateLimit({
+  windowMs: 10 * 60_000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user.uid,
+  handler: (_req, _res, next) =>
+    next(new HttpError(429, 'Too many code attempts. Please try again in a few minutes.')),
+});
+
+/**
  * POST /api/coupons/validate
  *
  * What checkout calls before showing a discount. Signed-in only, because the
@@ -47,6 +77,7 @@ const checkPercent = (body) => {
 router.post(
   '/validate',
   requireAuth,
+  validateLimiter,
   validate(
     z.object({
       code: z.string().trim().toUpperCase().min(1, 'Enter a code'),
