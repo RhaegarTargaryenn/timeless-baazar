@@ -1401,6 +1401,102 @@ existing row's Status change rather than a new row appearing.
 
 ---
 
+## Admin moves to a Firebase custom claim  2026-09-03
+
+Two API hardening fixes and the change that closes the handoff blocker this log
+has carried since 2026-08-28.
+
+### Bad requests were answered as server faults
+
+A malformed id -- `PATCH /api/products/abc` -- raises a Mongoose `CastError`,
+which is not an `HttpError`, so it fell through to a 500 "Something went wrong
+on our side." That is wrong in both directions: it sends a caller who made a bad
+request looking for a fault on the server, and it buries genuine 500s among the
+noise in Render's logs. `errorHandler` now translates Mongoose's own errors --
+`CastError` to a 400 naming the bad value, `ValidationError` to a 400 carrying
+per-field details, a duplicate key to a 409 naming the field. Everything else is
+still logged in full and told to the client as nothing.
+
+### Coupon guessing had no budget of its own
+
+The app-wide limiter allows 120 requests a minute, and against short
+human-memorable codes -- `SAVE10`, `DIWALI` -- that is not a defence, it is a
+rate card. `/coupons/validate` is the only endpoint that will tell a caller
+whether a code is real, so it now has ten attempts per ten minutes.
+
+**Only failures count** (`skipSuccessfulRequests`). A customer applying a code
+that works, changing their cart and applying it again is doing nothing wrong and
+must never be locked out mid-checkout; someone working a wordlist gets nothing
+but misses. Keyed on the Firebase uid rather than the IP -- which is why it sits
+after `requireAuth` -- so a household behind one connection does not share a
+budget.
+
+### Admin is a claim now, not an environment variable
+
+`ADMIN_UIDS` meant granting admin was an env edit plus a redeploy on Render, in
+an environment that has its own copy of everything. That is exactly how the shop
+owner ended up an admin on a developer's laptop and **not in their own shop** --
+the item this log has listed as "the one thing that will bite at handoff".
+
+Admin is now an `admin: true` custom claim on the Firebase account. It is set
+with the Admin SDK, lives beside the account, travels inside the signed ID
+token, and can only be written by something already holding the service account
+key -- as unforgeable as the env list, and unlike a role flag in Mongo it cannot
+be flipped by anything that manages to write to a collection. Nothing needs
+redeploying to grant one.
+
+`backend/src/scripts/setAdmin.js`, wired to `npm run set-admin`:
+
+```
+npm run set-admin -- --list                who is an admin today
+npm run set-admin -- shop@example.com      grant
+npm run set-admin -- shop@example.com --revoke
+```
+
+It merges rather than replaces -- `setCustomUserClaims` overwrites the whole
+object, and building it from scratch would silently drop any other claim the
+account carries. There are none today; there is no reason to leave that trap.
+
+**`ADMIN_UIDS` is deliberately kept as a fallback.** Dropping it in the same
+change that introduces claims would mean one missed step locks the client out of
+their own panel, and the recovery needs the very access that was just lost.
+`--list` shows both sources and says plainly when the variable can be emptied.
+
+One rule for both, `isAdminToken`, and `requireAdmin` now reads `req.isAdmin`
+rather than re-deriving it, so the read-only routes and the write guard can
+never disagree. It fails closed: if `attachUser` were ever unmounted,
+`req.isAdmin` is undefined and everyone is refused rather than admitted.
+
+**A newly granted admin must sign out and back in.** The claim is baked into the
+ID token and their browser is holding one minted before it existed; it would
+refresh within the hour on its own. `refreshUser()` in `AuthContext` already
+forces `getIdToken(true)`, so no frontend change was needed.
+
+### Verified
+
+- 17 checks on a live Express app: a real `CastError` from `findByIdAndUpdate`
+  returns 400 naming the value, `ValidationError` returns its details, a
+  duplicate key 409, an `HttpError` passes through untouched, a genuine bug is
+  still a 500 that leaks nothing under `NODE_ENV=production`, `notFound` intact.
+  On the limiter: ten misses allowed and the eleventh 429s in the app's own
+  error shape, a second uid unaffected, thirty consecutive successful applies
+  never throttled.
+- 14 checks on the admin rule: the claim grants, `ADMIN_UIDS` still grants, a
+  stranger gets nothing, and `admin` must be exactly `true` -- `"true"`, `1` and
+  `false` are all refused. `requireAdmin` 401s with no user, 403s without the
+  flag, and 403s when the flag is missing entirely.
+- **`npm run set-admin -- --list` run against the real Firebase project.** It
+  reports 0 accounts with the claim and 3 in `ADMIN_UIDS`: the developer,
+  `timelessbazzar76@gmail.com` (the shop), and `guptashyamsunder501@gmail.com`
+  -- **a third admin this log did not know about.** Worth confirming with the
+  client that it should be there.
+
+**Nobody has been granted the claim yet.** Until they are, everything still runs
+off `ADMIN_UIDS`, exactly as before -- including the Render copy that does not
+match. Granting the shop their claim is what actually fixes production.
+
+---
+
 ## Resume here
 
 Running locally needs both:
@@ -1417,11 +1513,11 @@ cd backend  && npm run dev   # API on :4000 -- without it the shop is empty
    receives them still appends, so until it is redeployed a completed order adds
    a duplicate row instead of updating its own. Nothing else here is blocked by
    it, and it is five minutes in the client's Google account.
-1. **`ADMIN_UIDS` on Render.** Local `backend/.env` now lists both the developer
-   and the shop (`timelessbazzar76@gmail.com`). **Render has its own copy of the
-   environment and has not been updated**, so the shop account is an admin
-   locally and *not* in production. This is the one thing that will bite at
-   handoff.
+1. ~~**`ADMIN_UIDS` on Render.**~~ Solved a different way on 2026-09-03: admin is
+   a Firebase custom claim now, which lives with the account rather than in
+   Render's environment. **The fix is to run `npm run set-admin -- <email>` for
+   each of the three accounts** -- until then production is still running off
+   Render's stale `ADMIN_UIDS` copy and the shop is not an admin there.
 2. **Cloudinary image upload.** The admin form still takes an image *path*, so
    the client cannot add a product photographed on their phone. The last gap
    stopping the panel from being genuinely self-serve.
