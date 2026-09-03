@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
@@ -27,6 +27,7 @@ const AccountAddresses = lazy(() => import('./pages/AccountAddresses'));
 // lives in this app rather than a separate one so the API client, auth and
 // design tokens stay in one place.
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
 const AdminProducts = lazy(() => import('./pages/admin/AdminProducts'));
 const AdminProductForm = lazy(() => import('./pages/admin/AdminProductForm'));
@@ -192,9 +193,11 @@ function App() {
                     </AdminRoute>
                   }
                 >
-                  {/* Orders is the landing screen: it is the only one with
-                      customers waiting on it. */}
-                  <Route index element={<Navigate to="/admin/orders" replace />} />
+                  {/* The dashboard is the landing screen. Orders held this
+                      slot while it was the only screen with customers waiting
+                      on it; the dashboard leads with that same number and
+                      links straight through to them. */}
+                  <Route index element={<AdminDashboard />} />
                   <Route path="orders" element={<AdminOrders />} />
                   <Route path="products" element={<AdminProducts />} />
                   <Route path="products/:id" element={<AdminProductForm />} />

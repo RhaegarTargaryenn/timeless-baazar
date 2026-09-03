@@ -1,7 +1,8 @@
 import React from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Ticket, Store, LogOut, Receipt } from '../../components/icons';
+import { Package, Ticket, Store, LogOut, Receipt, LayoutGrid
+} from '../../components/icons';
 import { useAuth } from '../../context/AuthContext';
 import { haptic } from '../../lib/haptics';
 import { spring, tap } from '../../lib/motion';
@@ -15,6 +16,9 @@ import { cx } from '../../components/ui';
  * the client feels like it.
  */
 const NAV = [
+  // `end` because this one sits at the index route: without it every /admin/*
+  // path counts as a match and Dashboard stays lit on every screen.
+  { to: '/admin', label: 'Home', icon: LayoutGrid, end: true },
   { to: '/admin/orders', label: 'Orders', icon: Receipt },
   { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/coupons', label: 'Offers', icon: Ticket },
@@ -51,8 +55,8 @@ const AdminLayout = () => {
 
           {/* Wide screens: nav lives up here */}
           <nav className="hidden sm:flex items-center gap-1">
-            {NAV.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to}>
+            {NAV.map(({ to, label, icon: Icon, end }) => (
+              <NavLink key={to} to={to} end={end}>
                 {({ isActive }) => (
                   <span
                     className={cx(
@@ -108,8 +112,8 @@ const AdminLayout = () => {
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
       >
         <nav className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-full bg-forest shadow-float">
-          {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} aria-label={label}>
+          {NAV.map(({ to, label, icon: Icon, end }) => (
+            <NavLink key={to} to={to} end={end} aria-label={label}>
               {({ isActive }) => (
                 <motion.span
                   whileTap={tap}

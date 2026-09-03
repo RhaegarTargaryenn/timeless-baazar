@@ -317,6 +317,197 @@ router.get(
 );
 
 /**
+ * GET /api/orders/admin/stats — what the shop's dashboard draws.
+ *
+ * Computed in MongoDB rather than in the browser, and that is the whole reason
+ * this route exists: `/admin/all` caps `limit` at 100, so a dashboard adding up
+ * rows on the client would silently describe **the most recent hundred orders**
+ * and call it the year. It would also grow slower every month for a number that
+ * an aggregation returns in one round trip.
+ *
+ * **Cancelled orders are excluded from every money figure.** They are orders
+ * that never happened; counting their rupees would overstate the shop's takings
+ * and make the totals disagree with the sheet. They are still counted in the
+ * status breakdown, because "how many did we void" is a real question.
+ *
+ * **Every day boundary is Asia/Kolkata**, not the server's. Render runs in UTC,
+ * so grouping on the server clock puts every order placed between midnight and
+ * 05:30 IST on the previous day -- the same bug this file's order numbering was
+ * fixed for once already.
+ */
+const IST = 'Asia/Kolkata';
+
+router.get(
+  '/admin/stats',
+  requireAdmin,
+  validate(
+    z.object({
+      // How much history the chart draws. Bounded so a stray ?days=100000
+      // cannot ask Mongo to build a hundred thousand buckets.
+      days: z.coerce.number().int().min(7).max(365).default(30),
+    }),
+    'query'
+  ),
+  asyncHandler(async (req, res) => {
+    const { days } = req.valid.query;
+
+    // Midnight IST, `days` ago. Built from the IST calendar date rather than by
+    // subtracting milliseconds from now, so the window starts at the beginning
+    // of a day the shop would recognise instead of at whatever time it is.
+    const startOfToday = new Date(
+      new Date().toLocaleString('en-US', { timeZone: IST })
+    );
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const since = new Date(startOfToday);
+    since.setDate(since.getDate() - (days - 1));
+
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfWeek.getDate() - 6);
+
+    const startOfMonth = new Date(startOfToday);
+    startOfMonth.setDate(1);
+
+    const earns = { status: { $ne: 'cancelled' } };
+
+    const sumOver = (from) => [
+      { $match: { ...earns, createdAt: { $gte: from } } },
+      { $group: { _id: null, orders: { $sum: 1 }, revenue: { $sum: '$total' } } },
+    ];
+
+    const [
+      today,
+      week,
+      month,
+      allTime,
+      statusRows,
+      seriesRows,
+      topRows,
+      catalogue,
+    ] = await Promise.all([
+      Order.aggregate(sumOver(startOfToday)),
+      Order.aggregate(sumOver(startOfWeek)),
+      Order.aggregate(sumOver(startOfMonth)),
+      Order.aggregate([
+        { $match: earns },
+        { $group: { _id: null, orders: { $sum: 1 }, revenue: { $sum: '$total' } } },
+      ]),
+
+      Order.aggregate([{ $group: { _id: '$status', n: { $sum: 1 } } }]),
+
+      // One bucket per calendar day, in the shop's own timezone.
+      Order.aggregate([
+        { $match: { ...earns, createdAt: { $gte: since } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: IST } },
+            orders: { $sum: 1 },
+            revenue: { $sum: '$total' },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+
+      /*
+        Best sellers, by quantity actually sold.
+
+        Grouped on the snapshotted name rather than productId: a product that
+        was renamed or deleted still has to appear, and the order's own snapshot
+        is the only record of what the customer bought.
+      */
+      Order.aggregate([
+        { $match: { ...earns, createdAt: { $gte: since } } },
+        { $unwind: '$items' },
+        {
+          $group: {
+            _id: '$items.name',
+            quantity: { $sum: '$items.quantity' },
+            revenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } },
+          },
+        },
+        { $sort: { quantity: -1 } },
+        { $limit: 5 },
+      ]),
+
+      Product.aggregate([
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            live: { $sum: { $cond: ['$isActive', 1, 0] } },
+          },
+        },
+      ]),
+    ]);
+
+    const totals = (rows) => ({
+      orders: rows[0]?.orders ?? 0,
+      revenue: rows[0]?.revenue ?? 0,
+    });
+
+    const statuses = Object.fromEntries(ORDER_STATUSES.map((value) => [value, 0]));
+    for (const row of statusRows) {
+      if (row._id in statuses) statuses[row._id] = row.n;
+    }
+
+    /*
+      Days with no orders are filled in as zero.
+
+      Mongo returns only the days that have documents, and a line chart fed a
+      gappy series draws a straight line across a quiet week as though trade
+      continued through it.
+    */
+    const byDay = new Map(seriesRows.map((row) => [row._id, row]));
+    const series = [];
+    for (let index = 0; index < days; index += 1) {
+      const day = new Date(since);
+      day.setDate(day.getDate() + index);
+
+      const key = new Intl.DateTimeFormat('en-CA', {
+        timeZone: IST,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(day);
+
+      const row = byDay.get(key);
+      series.push({ date: key, orders: row?.orders ?? 0, revenue: row?.revenue ?? 0 });
+    }
+
+    const lifetime = totals(allTime);
+
+    res.json({
+      stats: {
+        days,
+        today: totals(today),
+        week: totals(week),
+        month: totals(month),
+        allTime: lifetime,
+
+        // Rounded to whole paise: an average is for reading, and the sub-paise
+        // tail is noise the UI would have to trim anyway.
+        averageOrderValue: lifetime.orders
+          ? Math.round(lifetime.revenue / lifetime.orders)
+          : 0,
+
+        statuses,
+        series,
+        topProducts: topRows.map((row) => ({
+          name: row._id,
+          quantity: row.quantity,
+          revenue: row.revenue,
+        })),
+        catalogue: {
+          total: catalogue[0]?.total ?? 0,
+          live: catalogue[0]?.live ?? 0,
+          hidden: (catalogue[0]?.total ?? 0) - (catalogue[0]?.live ?? 0),
+        },
+      },
+    });
+  })
+);
+
+/**
  * PATCH /api/orders/:orderNumber/status — move an order between the two states.
  *
  * Both directions are allowed on purpose. Completing is one tap and the client
