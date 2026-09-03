@@ -1401,7 +1401,7 @@ existing row's Status change rather than a new row appearing.
 
 ---
 
-## Admin moves to a Firebase custom claim  2026-09-03
+## Two API fixes, and an admin change that was reverted  2026-09-03
 
 Two API hardening fixes and the change that closes the handoff blocker this log
 has carried since 2026-08-28.
@@ -1431,46 +1431,42 @@ but misses. Keyed on the Firebase uid rather than the IP -- which is why it sits
 after `requireAuth` -- so a household behind one connection does not share a
 budget.
 
-### Admin is a claim now, not an environment variable
+### Admin as a Firebase claim — built, and removed the same day
 
-`ADMIN_UIDS` meant granting admin was an env edit plus a redeploy on Render, in
-an environment that has its own copy of everything. That is exactly how the shop
-owner ended up an admin on a developer's laptop and **not in their own shop** --
-the item this log has listed as "the one thing that will bite at handoff".
+**Do not build this again.** It worked, it was verified, and it was taken out at
+the client's request within the hour. The reason is not technical and is worth
+recording, because the code was good and the next person will be tempted.
 
-Admin is now an `admin: true` custom claim on the Firebase account. It is set
-with the Admin SDK, lives beside the account, travels inside the signed ID
-token, and can only be written by something already holding the service account
-key -- as unforgeable as the env list, and unlike a role flag in Mongo it cannot
-be flipped by anything that manages to write to a collection. Nothing needs
-redeploying to grant one.
+The idea: `ADMIN_UIDS` lives in two unsynced copies -- `backend/.env` and
+Render's own environment -- and granting an admin means editing both and
+redeploying. Miss one and you get exactly what this log recorded on 2026-08-28,
+an owner who is an admin on a developer's laptop and not in their own shop. A
+Firebase custom claim lives with the account instead, so there is one copy that
+both environments already read.
 
-`backend/src/scripts/setAdmin.js`, wired to `npm run set-admin`:
+Built as an `admin: true` claim with `npm run set-admin` (grant / `--revoke` /
+`--list`), `ADMIN_UIDS` kept as a fallback so nothing could break, and the claim
+granted to the shop and one other account.
 
-```
-npm run set-admin -- --list                who is an admin today
-npm run set-admin -- shop@example.com      grant
-npm run set-admin -- shop@example.com --revoke
-```
+**The client asked for it to be removed**, in their words: *"remove this concept
+which you have implemented, because I am not able to understand it. The only way
+to make anyone admin is that I will [set] the environment variable on the Render
+dashboard -- that is simple and sorted."*
 
-It merges rather than replaces -- `setCustomUserClaims` overwrites the whole
-object, and building it from scratch would silently drop any other claim the
-account carries. There are none today; there is no reason to leave that trap.
+That is the right call and it is theirs to make. They maintain this shop alone;
+a mechanism whose owner cannot reason about it is worse than a clumsier one they
+can, however good the code is. Two ways of becoming an admin is also genuinely
+more surface than one -- the fallback that made the rollout safe is the same
+thing that made the system harder to hold in your head.
 
-**`ADMIN_UIDS` is deliberately kept as a fallback.** Dropping it in the same
-change that introduces claims would mean one missed step locks the client out of
-their own panel, and the recovery needs the very access that was just lost.
-`--list` shows both sources and says plainly when the variable can be emptied.
+Both claims were revoked before the tooling was deleted, so nothing invisible is
+left on those accounts: `--list` reported 0 before the script was removed.
+`middleware/auth.js` is byte-for-byte what it was, and `ADMIN_UIDS` is once again
+the only thing that grants admin.
 
-One rule for both, `isAdminToken`, and `requireAdmin` now reads `req.isAdmin`
-rather than re-deriving it, so the read-only routes and the write guard can
-never disagree. It fails closed: if `attachUser` were ever unmounted,
-`req.isAdmin` is undefined and everyone is refused rather than admitted.
-
-**A newly granted admin must sign out and back in.** The claim is baked into the
-ID token and their browser is holding one minted before it existed; it would
-refresh within the hour on its own. `refreshUser()` in `AuthContext` already
-forces `getIdToken(true)`, so no frontend change was needed.
+**What is still true, and still unfixed:** the two copies do not sync. If the
+shop account ever stops seeing the panel, the first place to look is
+`ADMIN_UIDS` in Render's dashboard, not the code.
 
 ### Verified
 
@@ -1481,19 +1477,18 @@ forces `getIdToken(true)`, so no frontend change was needed.
   On the limiter: ten misses allowed and the eleventh 429s in the app's own
   error shape, a second uid unaffected, thirty consecutive successful applies
   never throttled.
-- 14 checks on the admin rule: the claim grants, `ADMIN_UIDS` still grants, a
-  stranger gets nothing, and `admin` must be exactly `true` -- `"true"`, `1` and
-  `false` are all refused. `requireAdmin` 401s with no user, 403s without the
-  flag, and 403s when the flag is missing entirely.
-- **`npm run set-admin -- --list` run against the real Firebase project.** It
-  reports 0 accounts with the claim and 3 in `ADMIN_UIDS`: the developer,
-  `timelessbazzar76@gmail.com` (the shop), and `guptashyamsunder501@gmail.com`
-  -- **a third admin this log did not know about.** Worth confirming with the
-  client that it should be there.
+- `middleware/auth.js` restored from `0962e8b^` and confirmed identical to what
+  it was before the claim work, and both granted claims revoked before the
+  tooling was deleted -- `--list` read 0 while it could still be run.
 
-**Nobody has been granted the claim yet.** Until they are, everything still runs
-off `ADMIN_UIDS`, exactly as before -- including the Render copy that does not
-match. Granting the shop their claim is what actually fixes production.
+**One thing the claim work turned up that outlived it:** the local `ADMIN_UIDS`
+holds **three** uids, not the two this log had recorded -- the developer,
+`timelessbazzar76@gmail.com` (the shop), and `guptashyamsunder501@gmail.com`.
+The third is not mentioned anywhere else here. Worth confirming with the client
+that it belongs.
+
+Whether Render's copy matches has still never been checked from here; the client
+believes the uids in it can reach the panel.
 
 ---
 
@@ -1513,11 +1508,13 @@ cd backend  && npm run dev   # API on :4000 -- without it the shop is empty
    receives them still appends, so until it is redeployed a completed order adds
    a duplicate row instead of updating its own. Nothing else here is blocked by
    it, and it is five minutes in the client's Google account.
-1. ~~**`ADMIN_UIDS` on Render.**~~ Solved a different way on 2026-09-03: admin is
-   a Firebase custom claim now, which lives with the account rather than in
-   Render's environment. **The fix is to run `npm run set-admin -- <email>` for
-   each of the three accounts** -- until then production is still running off
-   Render's stale `ADMIN_UIDS` copy and the shop is not an admin there.
+1. **`ADMIN_UIDS` on Render.** Local `backend/.env` lists three uids: the
+   developer, the shop (`timelessbazzar76@gmail.com`) and
+   `guptashyamsunder501@gmail.com`. **Render keeps its own copy and nothing
+   syncs the two** — if the shop cannot see the panel in production, that copy
+   is the first place to look. Custom claims were tried as a fix for this on
+   2026-09-03 and removed at the client's request; the env var is the only
+   mechanism, by their decision.
 2. **Cloudinary image upload.** The admin form still takes an image *path*, so
    the client cannot add a product photographed on their phone. The last gap
    stopping the panel from being genuinely self-serve.

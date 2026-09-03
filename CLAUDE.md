@@ -52,14 +52,12 @@ cd backend && npm run migrate-orders   # one-off: six old statuses -> two
   `status: { $ne: 'cancelled' }`, and the two must stay in step. Without it, the
   shop voiding a mistaken order burns the customer's one use of a code for an
   order that never happened.
-- **Admin is an `admin: true` Firebase custom claim**, granted with
-  `cd backend && npm run set-admin -- <email>` (`--revoke` to remove, `--list`
-  to see who has it). The claim rides in the signed ID token, so adding an admin
-  no longer needs a Render env edit and a redeploy. `ADMIN_UIDS` still grants
-  access as a fallback and can be emptied once `--list` shows nobody relying on
-  it alone. One rule, in `isAdminToken`; `requireAdmin` reads `req.isAdmin` and
-  fails closed. **A newly granted admin must sign out and back in** — their
-  browser is holding a token minted before the claim existed.
+- **Admin is `ADMIN_UIDS`, an env var, and nothing else.** To add one, put the
+  Firebase UID in `backend/.env` locally *and* in Render's own environment —
+  they are separate copies and neither syncs to the other. Firebase custom
+  claims were built for this on 2026-09-03 and **removed the same day at the
+  client's request**: they maintain this alone and wanted one mechanism they
+  could reason about, not two. Do not reintroduce them.
 - **The Google Sheet is a mirror of MongoDB, never a source.** Nothing in the
   app reads it. Two writes, both fire-and-forget from
   `backend/src/services/sheets.js`: `syncOrderToSheet` when an order is placed,

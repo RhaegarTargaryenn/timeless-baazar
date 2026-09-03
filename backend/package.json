@@ -12,8 +12,7 @@
     "seed": "node src/scripts/seedProducts.js",
     "smoke": "node src/scripts/smokeTest.js",
     "check-db": "node src/scripts/checkDb.js",
-    "migrate-orders": "node src/scripts/migrateOrderStatuses.js",
-    "set-admin": "node src/scripts/setAdmin.js"
+    "migrate-orders": "node src/scripts/migrateOrderStatuses.js"
   },
   "dependencies": {
     "compression": "^1.8.1",
