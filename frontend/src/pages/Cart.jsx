@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Minus, Plus, X, ShoppingBag } from '../components/icons';
+import { Minus, Plus, X, ShoppingBag, Trash2 } from '../components/icons';
 
 import useCartStore from '../store/cartStore';
 import { formatRupees } from '../lib/api';
 import { Price } from '../components/ProductCard';
 import { Button, EmptyState, cx } from '../components/ui';
 import PageHeader from '../components/PageHeader';
-import { pageIn, spring, tap, gridItem, gridContainer } from '../lib/motion';
+import { haptic } from '../lib/haptics';
+import { pageIn, spring, tap, gridItem, gridContainer, EASE } from '../lib/motion';
 
 /**
  * The cart, from the Figma source (node `1:1015`, "My Cart").
@@ -119,13 +120,104 @@ const Cart = () => {
   const navigate = useNavigate();
   const items = useCartStore((state) => state.items);
   const getTotal = useCartStore((state) => state.getTotal);
+  const clearCart = useCartStore((state) => state.clearCart);
+
+  /**
+   * Emptying the cart sits behind a confirm, and an inline one.
+   *
+   * A "Clear all" existed on this screen before and was removed because it
+   * opened a `window.confirm` -- a system dialog that looks nothing like the
+   * app, blocks the page, and reads as a browser warning rather than a question
+   * the shop is asking. This is the pattern AdminOrders uses to cancel an
+   * order: the control swaps for the question in place.
+   */
+  const [confirming, setConfirming] = useState(false);
+
+  /*
+    Only worth offering with more than one line -- with a single row its own X
+    already does the job, and a second control for the same outcome is clutter.
+    Removing rows by hand while the strip is open can drop the cart below that,
+    so the state is closed here rather than left stranded over a list it no
+    longer applies to.
+  */
+  const canClearAll = items.length > 1;
+
+  useEffect(() => {
+    if (!canClearAll) setConfirming(false);
+  }, [canClearAll]);
 
   const subtotal = getTotal();
+
+  const handleClear = () => {
+    /*
+      `clearCart` is deliberately silent in the store: it also runs on a
+      successful order, where Checkout already fires `success` and a second
+      buzz on top of it reads as a rattle. A clear the customer asked for does
+      want an answer, so the feedback lives at this call site.
+    */
+    haptic('warning');
+    clearCart();
+    setConfirming(false);
+  };
 
   return (
     <motion.div {...pageIn} className="min-h-screen bg-surface flex flex-col">
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <PageHeader title="My Cart" />
+      <PageHeader
+        title="My Cart"
+        right={
+          canClearAll && (
+            <motion.button
+              whileTap={tap}
+              onClick={() => {
+                haptic('tap');
+                setConfirming((open) => !open);
+              }}
+              aria-label={confirming ? 'Keep my items' : 'Remove everything from the cart'}
+              aria-expanded={confirming}
+              className={cx(
+                'w-10 h-10 flex items-center justify-center transition-colors',
+                confirming ? 'text-coral' : 'text-ink-faint hover:text-coral'
+              )}
+            >
+              <Trash2 className="w-[22px] h-[22px]" />
+            </motion.button>
+          )
+        }
+        /*
+          The question goes inside the bar, not after it: the slot holding the
+          icon is 40px wide and a sentence with two buttons does not fit there,
+          and rendered as a sibling the strip would need its own sticky offset
+          -- this bar's height as a magic number. `overflow-hidden` on the
+          collapsing wrapper keeps the rows from showing through as it opens.
+        */
+        below={
+          <AnimatePresence initial={false}>
+            {confirming && (
+              <motion.div
+                key="clear-confirm"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: EASE }}
+                className="overflow-hidden bg-surface-sunken"
+              >
+                <div className="flex items-center gap-2 px-[25px] py-3">
+                  <p className="flex-1 text-[13px] text-ink-muted">
+                    Remove all {items.length} items?
+                  </p>
+                  <Button size="sm" variant="secondary" onClick={() => setConfirming(false)}>
+                    Keep
+                  </Button>
+                  <Button size="sm" variant="danger" onClick={handleClear}>
+                    Clear all
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        }
+      />
 
       {items.length === 0 ? (
         <EmptyState

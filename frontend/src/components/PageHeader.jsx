@@ -32,7 +32,16 @@ import { cx } from './ui';
  */
 export const useCanGoBack = () => useLocation().key !== 'default';
 
-const PageHeader = ({ title, back = true, onBack, right, className, titleClassName }) => {
+/**
+ * `below` renders inside the sticky bar, under the title row.
+ *
+ * A strip that belongs to the header -- a confirmation the header's own action
+ * opened, say -- has to travel with it. Rendered as a sibling instead it needs
+ * its own `sticky` offset, which means hardcoding this bar's height as a magic
+ * number and having the two drift apart the moment the notch inset or the type
+ * size changes. Inside, there is no number to get wrong.
+ */
+const PageHeader = ({ title, back = true, onBack, right, below, className, titleClassName }) => {
   const navigate = useNavigate();
   const canGoBack = useCanGoBack();
 
@@ -77,6 +86,13 @@ const PageHeader = ({ title, back = true, onBack, right, className, titleClassNa
           {right}
         </div>
       )}
+
+      {/*
+        Outside the padded title row and given its own full-bleed width, so a
+        strip here can carry its own background edge to edge rather than sitting
+        in a 25px inset gutter.
+      */}
+      {below && <div className="-mx-[25px] -mb-5 mt-5">{below}</div>}
     </header>
   );
 };
